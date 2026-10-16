@@ -48,6 +48,13 @@ public enum TimeAllocationResponse
     TooLong = 3
 }
 
+public enum ProgrammeAttendanceStatus
+{
+    Pending,
+    Present,
+    Absent
+}
+
 public class InductionCase
 {
     public int Id { get; set; }
@@ -116,6 +123,7 @@ public class InductionCase
 
     public int? InductionProgrammeId { get; set; }
     public InductionProgramme? InductionProgramme { get; set; }
+    public ProgrammeAttendance? ProgrammeAttendance { get; set; }
 
     public ICollection<InductionTask> Tasks { get; set; } = [];
     public ICollection<SignOff> SignOffs { get; set; } = [];
@@ -278,6 +286,7 @@ public class InductionProgramme
 
     public ICollection<InductionProgrammeSession> Sessions { get; set; } = [];
     public ICollection<InductionCase> Participants { get; set; } = [];
+    public ICollection<ProgrammeAttendance> Attendances { get; set; } = [];
 }
 
 public class InductionProgrammeSession
@@ -292,11 +301,45 @@ public class InductionProgrammeSession
     [Required, StringLength(150)]
     public string PresenterName { get; set; } = string.Empty;
 
+    [Required, StringLength(150)]
+    public string PresenterUsername { get; set; } = string.Empty;
+
     public TimeSpan StartTime { get; set; }
     public TimeSpan EndTime { get; set; }
     public int SortOrder { get; set; }
 
     public ICollection<PresentationRating> Ratings { get; set; } = [];
+}
+
+public class ProgrammeAttendance
+{
+    public int Id { get; set; }
+    public int InductionProgrammeId { get; set; }
+    public InductionProgramme InductionProgramme { get; set; } = null!;
+    public int InductionCaseId { get; set; }
+    public InductionCase InductionCase { get; set; } = null!;
+    public ProgrammeAttendanceStatus Status { get; set; } = ProgrammeAttendanceStatus.Pending;
+
+    [StringLength(150)]
+    public string? ConfirmedBy { get; set; }
+
+    [StringLength(184)]
+    public string? ConfirmedBySid { get; set; }
+
+    [StringLength(100)]
+    public string? AuthenticationType { get; set; }
+
+    [StringLength(50)]
+    public string? ConfirmationSource { get; set; }
+
+    public DateTime? ConfirmedAtUtc { get; set; }
+    public DateTime? InvitationSentAtUtc { get; set; }
+
+    [StringLength(150)]
+    public string? InvitationSentBy { get; set; }
+
+    [StringLength(254), EmailAddress]
+    public string? InvitationSentTo { get; set; }
 }
 
 public class PresentationRating

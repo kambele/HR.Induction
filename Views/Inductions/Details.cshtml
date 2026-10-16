@@ -324,42 +324,29 @@
                 }
                 else if (Model.CanSubmitFeedback)
                 {
-                    <form asp-action="SubmitFeedback" method="post">
-                        <input type="hidden" name="InductionCaseId" value="@induction.Id" />
-                        <div class="programme-rating-table mb-4">
-                            <div class="programme-rating-header"><span>Divisional presentation</span><span>Rating</span></div>
-                            @for (var index = 0; index < induction.InductionProgramme!.Sessions.OrderBy(x => x.SortOrder).Count(); index++)
-                            {
-                                var session = induction.InductionProgramme.Sessions.OrderBy(x => x.SortOrder).ElementAt(index);
-                                <div class="programme-rating-row">
-                                    <input type="hidden" name="PresentationRatings[@index].ProgrammeSessionId" value="@session.Id" />
-                                    <label for="presentation-rating-@session.Id"><strong>@session.Division</strong><small>@session.PresenterName · @session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</small></label>
-                                    <select class="form-select" id="presentation-rating-@session.Id" name="PresentationRatings[@index].Rating" required>
-                                        <option value="">Select</option><option value="1">1 - Poor</option><option value="2">2 - Fair</option><option value="3">3 - Good</option><option value="4">4 - Very good</option><option value="5">5 - Excellent</option>
-                                    </select>
-                                </div>
-                            }
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="programme-understanding">The programme provided a good understanding of the organisation and its divisions</label>
-                            <select class="form-select" id="programme-understanding" name="ProgrammeUnderstandingRating" required><option value="">Select response</option><option value="5">Strongly agree</option><option value="4">Agree</option><option value="3">Neutral</option><option value="2">Disagree</option><option value="1">Strongly disagree</option></select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="time-allocation">The time allocation for each divisional presentation was appropriate</label>
-                            <select class="form-select" id="time-allocation" name="TimeAllocationResponse" required><option value="">Select response</option><option value="Appropriate">Yes, appropriate</option><option value="TooShort">Too short</option><option value="TooLong">Too long</option></select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="overall-rating">Overall corporate induction programme rating</label>
-                            <select class="form-select" id="overall-rating" name="OverallProgrammeRating" required><option value="">Select rating</option><option value="5">Excellent</option><option value="4">Very good</option><option value="3">Good</option><option value="2">Fair</option><option value="1">Poor</option></select>
-                        </div>
-                        <div class="mb-3"><label class="form-label" for="valuable-aspect">What was the most valuable aspect of the induction programme?</label><textarea class="form-control" id="valuable-aspect" name="MostValuableAspect" rows="3" maxlength="2000" required></textarea></div>
-                        <div class="mb-3"><label class="form-label" for="improvements">What improvements would you recommend for future induction programmes?</label><textarea class="form-control" id="improvements" name="ImprovementRecommendations" rows="3" maxlength="2000" required></textarea></div>
-                        <button class="btn btn-primary" type="submit">Submit feedback</button>
-                    </form>
+                    <div class="empty-state">
+                        <h3>Feedback form is ready</h3>
+                        <p>Rate every divisional presentation and the overall programme on the dedicated employee form.</p>
+                        <a class="btn btn-primary" asp-action="Feedback" asp-route-id="@induction.Id">Open feedback form</a>
+                    </div>
                 }
                 else
                 {
-                    <div class="empty-state">@(induction.InductionProgramme is null ? "An induction programme must be assigned before feedback can be submitted." : "Waiting for the employee to submit feedback.")</div>
+                    <div class="empty-state">
+                        @if (induction.InductionProgramme is null)
+                        {
+                            <p>An induction programme must be assigned before feedback can be submitted.</p>
+                        }
+                        else if (induction.ProgrammeAttendance?.Status != ProgrammeAttendanceStatus.Present && AccessService.CanSelfConfirmAttendance(User, induction))
+                        {
+                            <p>Confirm attendance before completing the programme feedback form.</p>
+                            <a class="btn btn-primary" asp-controller="Attendance" asp-action="Confirm" asp-route-id="@induction.Id">Confirm attendance</a>
+                        }
+                        else
+                        {
+                            <p>Waiting for the employee to confirm attendance and submit feedback.</p>
+                        }
+                    </div>
                 }
             </div>
         </div>

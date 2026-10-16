@@ -338,7 +338,7 @@ textarea.form-control { min-height: auto; }
 .programme-schedule-table th:first-child, .programme-schedule-table td:first-child { white-space: nowrap; width: 150px; }
 .programme-editor-card { max-width: 1180px; }
 .programme-session-editor { display: grid; gap: .8rem; }
-.programme-session-row { display: grid; grid-template-columns: minmax(210px,1.2fr) minmax(190px,1fr) 145px 145px auto; align-items: end; gap: .8rem; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: #fbfcfa; }
+.programme-session-row { display: grid; grid-template-columns: minmax(180px,1.1fr) minmax(165px,1fr) minmax(190px,1fr) 125px 125px auto; align-items: end; gap: .8rem; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: #fbfcfa; }
 .programme-participant-list { display: grid; }
 .programme-participant-list a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem .2rem; color: var(--ink); text-decoration: none; border-bottom: 1px solid #edf1ed; }
 .programme-participant-list a:last-child { border-bottom: 0; }
@@ -356,6 +356,52 @@ textarea.form-control { min-height: auto; }
 .submitted-ratings span, .submitted-ratings small { display: block; }
 .submitted-ratings small { margin-top: .15rem; color: var(--muted); font-size: .74rem; }
 .submitted-ratings strong { color: var(--green-800); font-size: 1.05rem; }
+
+.programme-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 1.25rem; }
+.presenter-programme-card { display: flex; flex-direction: column; gap: 1rem; }
+.presenter-programme-card h2 { margin: 0; font-size: 1.2rem; }
+.presenter-programme-card p { margin: .3rem 0 0; color: var(--muted); }
+.attendance-summary-strip { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); overflow: hidden; border: 1px solid var(--line); border-radius: .75rem; }
+.attendance-summary-strip span { padding: .75rem .4rem; text-align: center; color: var(--muted); font-size: .7rem; font-weight: 700; border-left: 1px solid var(--line); }
+.attendance-summary-strip span:first-child { border-left: 0; }
+.attendance-summary-strip strong { display: block; color: var(--ink); font-size: 1.2rem; }
+.attendance-summary-strip .present strong { color: #176136; }
+.attendance-summary-strip .absent strong { color: #9d2f24; }
+.presenter-list { display: grid; gap: .35rem; }
+.presenter-list span { display: flex; justify-content: space-between; gap: 1rem; color: var(--ink); font-size: .82rem; }
+.presenter-list small { color: var(--muted); }
+.attendance-pill { display: inline-flex; width: fit-content; align-items: center; padding: .38rem .65rem; border-radius: 999px; color: #705718; background: #fff3cd; font-size: .74rem; font-weight: 800; }
+.attendance-present { color: #176136; background: #dff4e5; }
+.attendance-absent { color: #8f241a; background: var(--danger-100); }
+.attendance-table .subtext { display: block; }
+.metric-danger { border-top-color: #bd4438; }
+.metric-danger strong { color: #9d2f24; }
+.programme-agenda-list { display: grid; gap: .55rem; }
+.programme-agenda-list > div { display: grid; grid-template-columns: 105px 1fr; gap: .8rem; align-items: start; padding: .7rem 0; border-bottom: 1px solid #edf1ed; }
+.programme-agenda-list > div:last-child { border-bottom: 0; }
+.programme-agenda-list time { color: var(--green-800); font-weight: 800; }
+.programme-agenda-list span, .programme-agenda-list strong, .programme-agenda-list small, .programme-agenda-list code { display: block; }
+.programme-agenda-list small, .programme-agenda-list code { margin-top: .15rem; color: var(--muted); font-size: .76rem; }
+.attendance-confirm-shell { max-width: 820px; margin: 0 auto; }
+.attendance-confirm-card h2 { margin: 1.1rem 0 .25rem; }
+.attendance-employee { color: var(--muted); }
+.programme-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin: 1.5rem 0; padding: 1rem; border-radius: .8rem; background: #f4f7f4; }
+.programme-facts div { padding: 0 1rem; border-left: 1px solid var(--line); }
+.programme-facts div:first-child { padding-left: 0; border-left: 0; }
+.programme-facts dt { color: var(--muted); font-size: .72rem; text-transform: uppercase; }
+.programme-facts dd { margin: .2rem 0 0; font-weight: 800; }
+.attendance-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.attendance-choice { display: flex; align-items: center; gap: .85rem; padding: 1rem; text-align: left; color: var(--ink); background: #fff; border: 2px solid var(--line); border-radius: .9rem; }
+.attendance-choice:hover { border-color: var(--green-600); }
+.attendance-choice.is-selected.present { border-color: #2c8b50; background: #effaf2; }
+.attendance-choice.is-selected.absent { border-color: #bd4438; background: #fff2f0; }
+.attendance-choice-icon { display: grid; flex: 0 0 40px; width: 40px; height: 40px; place-items: center; border-radius: 50%; color: #fff; background: var(--green-700); font-size: 1.3rem; font-weight: 900; }
+.attendance-choice.absent .attendance-choice-icon { background: #a73c31; }
+.attendance-choice strong, .attendance-choice small { display: block; }
+.attendance-choice small { margin-top: .2rem; color: var(--muted); }
+.feedback-programme-summary { position: sticky; top: 1.5rem; }
+.feedback-programme-summary h2 { margin: 1rem 0 .2rem; font-size: 1.2rem; }
+.feedback-programme-summary > p { color: var(--muted); }
 
 .alert { border-radius: 0.8rem; }
 
@@ -393,6 +439,11 @@ textarea.form-control { min-height: auto; }
   .metric-card strong { font-size: 1.9rem; }
   .content-card { padding: 1rem; border-radius: .85rem; }
   .card-heading, .section-heading { align-items: flex-start; flex-direction: column; }
+  .attendance-summary-strip { grid-template-columns: 1fr 1fr; }
+  .attendance-choice-grid, .programme-facts { grid-template-columns: 1fr; }
+  .programme-facts div { padding: .7rem 0; border-left: 0; border-top: 1px solid var(--line); }
+  .programme-facts div:first-child { border-top: 0; }
+  .feedback-programme-summary { position: static; }
   .task-update-panel { position: fixed; left: 1rem; right: 1rem; top: auto; bottom: 1rem; width: auto; }
   .rating-table { min-width: 760px; }
 }

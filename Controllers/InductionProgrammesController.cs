@@ -105,6 +105,7 @@ public class InductionProgrammesController(
                     Id = x.Id,
                     Division = x.Division,
                     PresenterName = x.PresenterName,
+                    PresenterUsername = x.PresenterUsername,
                     StartTime = x.StartTime,
                     EndTime = x.EndTime
                 }).ToList()
@@ -135,6 +136,7 @@ public class InductionProgrammesController(
                 Id = x.Id,
                 Division = x.Division,
                 PresenterName = x.PresenterName,
+                PresenterUsername = x.PresenterUsername,
                 StartTime = x.StartTime,
                 EndTime = x.EndTime
             }).ToList();
@@ -206,7 +208,8 @@ public class InductionProgrammesController(
             .ThenInclude(x => x.Ratings)
         .Include(x => x.Participants)
             .ThenInclude(x => x.EmployeeFeedback)
-                .ThenInclude(x => x!.PresentationRatings);
+                .ThenInclude(x => x!.PresentationRatings)
+        .Include(x => x.Attendances);
 
     private async Task ValidateProgrammeAsync(InductionProgrammeEditorViewModel model, bool validateSessions = true)
     {
@@ -226,6 +229,7 @@ public class InductionProgrammesController(
             var session = model.Sessions[index];
             session.Division = session.Division?.Trim() ?? string.Empty;
             session.PresenterName = session.PresenterName?.Trim() ?? string.Empty;
+            session.PresenterUsername = session.PresenterUsername?.Trim() ?? string.Empty;
             if (!divisionLookup.Contains(session.Division))
             {
                 ModelState.AddModelError($"Sessions[{index}].Division", "Select an active division.");
@@ -277,6 +281,7 @@ public class InductionProgrammesController(
             {
                 Division = ordered[index].Division.Trim(),
                 PresenterName = ordered[index].PresenterName.Trim(),
+                PresenterUsername = ordered[index].PresenterUsername.Trim(),
                 StartTime = ordered[index].StartTime!.Value,
                 EndTime = ordered[index].EndTime!.Value,
                 SortOrder = index + 1

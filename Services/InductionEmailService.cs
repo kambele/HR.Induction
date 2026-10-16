@@ -34,6 +34,12 @@ public interface IInductionEmailService
         string subjectTemplate,
         string bodyTemplate,
         CancellationToken cancellationToken = default);
+
+    Task SendAttendanceInvitationAsync(
+        InductionCase inductionCase,
+        InductionProgramme programme,
+        string attendanceUrl,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions> options) : IInductionEmailService
@@ -93,6 +99,58 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
             Timeout = Math.Max(5_000, emailOptions.TimeoutMilliseconds)
         };
 
+        if (!string.IsNullOrWhiteSpace(emailOptions.Username))
+        {
+            smtpClient.Credentials = new NetworkCredential(emailOptions.Username, emailOptions.Password);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        await smtpClient.SendMailAsync(message, cancellationToken);
+    }
+
+    public async Task SendAttendanceInvitationAsync(
+        InductionCase inductionCase,
+        InductionProgramme programme,
+        string attendanceUrl,
+        CancellationToken cancellationToken = default)
+    {
+        var emailOptions = options.CurrentValue;
+        var configurationStatus = GetConfigurationStatus(emailOptions);
+        if (!configurationStatus.IsConfigured)
+        {
+            throw new InvalidOperationException(configurationStatus.Summary);
+        }
+        if (string.IsNullOrWhiteSpace(inductionCase.EmployeeEmail))
+        {
+            throw new InvalidOperationException("The employee does not have an email address recorded.");
+        }
+
+        var venue = string.IsNullOrWhiteSpace(programme.Venue) ? "Venue to be confirmed" : programme.Venue;
+        var subject = $"Attendance confirmation: {programme.Title} - {programme.ProgrammeDate:dd MMMM yyyy}";
+        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\nYou are scheduled to attend {programme.Title} on {programme.ProgrammeDate:dddd, dd MMMM yyyy} at {venue}. Please use the link below and sign in with your NAMFISA Windows account to confirm whether you are present or absent.\r\n\r\n{attendanceUrl}";
+
+        using var message = new MailMessage
+        {
+            From = new MailAddress(emailOptions.FromAddress!, emailOptions.FromName),
+            Subject = subject,
+            SubjectEncoding = Encoding.UTF8,
+            BodyEncoding = Encoding.UTF8
+        };
+        message.To.Add(new MailAddress(inductionCase.EmployeeEmail, inductionCase.EmployeeName));
+        message.Headers.Add("X-NAMFISA-Induction-Id", inductionCase.Id.ToString(CultureInfo.InvariantCulture));
+        message.Headers.Add("X-NAMFISA-Programme-Id", programme.Id.ToString(CultureInfo.InvariantCulture));
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(messageText, Encoding.UTF8, MediaTypeNames.Text.Plain));
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(
+            BuildAttendanceHtmlBody(inductionCase, programme, attendanceUrl),
+            Encoding.UTF8,
+            MediaTypeNames.Text.Html));
+
+        using var smtpClient = new SmtpClient(emailOptions.SmtpHost!, emailOptions.SmtpPort)
+        {
+            EnableSsl = emailOptions.UseSsl,
+            UseDefaultCredentials = string.IsNullOrWhiteSpace(emailOptions.Username),
+            Timeout = Math.Max(5_000, emailOptions.TimeoutMilliseconds)
+        };
         if (!string.IsNullOrWhiteSpace(emailOptions.Username))
         {
             smtpClient.Credentials = new NetworkCredential(emailOptions.Username, emailOptions.Password);
@@ -177,6 +235,50 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">This invitation was sent by the NAMFISA Employee Induction system.</td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
+            """;
+    }
+
+    private static string BuildAttendanceHtmlBody(
+        InductionCase inductionCase,
+        InductionProgramme programme,
+        string attendanceUrl)
+    {
+        var safeEmployeeName = WebUtility.HtmlEncode(inductionCase.EmployeeName);
+        var safeProgrammeTitle = WebUtility.HtmlEncode(programme.Title);
+        var safeProgrammeDate = WebUtility.HtmlEncode(programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy", CultureInfo.InvariantCulture));
+        var safeVenue = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(programme.Venue) ? "Venue to be confirmed" : programme.Venue);
+        var safeUrl = WebUtility.HtmlEncode(attendanceUrl);
+
+        return $$"""
+            <!doctype html>
+            <html lang="en">
+            <body style="margin:0;padding:0;background:#f3f6f2;font-family:Segoe UI,Arial,sans-serif;color:#17211c;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f3f6f2;padding:28px 12px;">
+                <tr><td align="center">
+                  <table role="presentation" width="620" cellspacing="0" cellpadding="0" style="width:100%;max-width:620px;background:#ffffff;border:1px solid #dce4dd;border-radius:14px;overflow:hidden;">
+                    <tr><td style="background:#123b2b;border-bottom:4px solid #91cf49;padding:24px 30px;color:#ffffff;">
+                      <div style="font-size:12px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#cfe9d7;">NAMFISA Human Resources</div>
+                      <div style="font-size:26px;font-weight:700;margin-top:6px;">Confirm induction attendance</div>
+                    </td></tr>
+                    <tr><td style="padding:30px;">
+                      <p style="font-size:16px;line-height:1.65;margin-top:0;">Hello {{safeEmployeeName}}, please confirm whether you are present or absent for this induction programme.</p>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0;background:#f7faf7;border:1px solid #dce4dd;border-radius:10px;">
+                        <tr><td style="padding:16px 18px;">
+                          <div style="font-size:18px;font-weight:700;">{{safeProgrammeTitle}}</div>
+                          <div style="font-size:14px;color:#66736c;margin-top:5px;">{{safeProgrammeDate}} · {{safeVenue}}</div>
+                        </td></tr>
+                      </table>
+                      <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
+                        <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Confirm attendance</a>
+                      </td></tr></table>
+                      <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
+                    </td></tr>
+                    <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">Attendance confirmations are recorded against the authenticated employee AD account.</td></tr>
                   </table>
                 </td></tr>
               </table>

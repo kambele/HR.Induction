@@ -321,6 +321,11 @@ namespace Namfisa.Induction.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<string>("PresenterUsername")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
@@ -469,6 +474,63 @@ namespace Namfisa.Induction.Migrations
                         .IsUnique();
 
                     b.ToTable("PresentationRatings");
+                });
+
+            modelBuilder.Entity("Namfisa.Induction.Models.ProgrammeAttendance", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthenticationType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ConfirmationSource")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ConfirmedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ConfirmedBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ConfirmedBySid")
+                        .HasMaxLength(184)
+                        .HasColumnType("nvarchar(184)");
+
+                    b.Property<int>("InductionCaseId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InductionProgrammeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("InvitationSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvitationSentBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("InvitationSentTo")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InductionCaseId")
+                        .IsUnique();
+
+                    b.HasIndex("InductionProgrammeId", "Status");
+
+                    b.ToTable("ProgrammeAttendances");
                 });
 
             modelBuilder.Entity("Namfisa.Induction.Models.SignOff", b =>
@@ -751,6 +813,25 @@ namespace Namfisa.Induction.Migrations
                     b.Navigation("InductionProgrammeSession");
                 });
 
+            modelBuilder.Entity("Namfisa.Induction.Models.ProgrammeAttendance", b =>
+                {
+                    b.HasOne("Namfisa.Induction.Models.InductionCase", "InductionCase")
+                        .WithOne("ProgrammeAttendance")
+                        .HasForeignKey("Namfisa.Induction.Models.ProgrammeAttendance", "InductionCaseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Namfisa.Induction.Models.InductionProgramme", "InductionProgramme")
+                        .WithMany("Attendances")
+                        .HasForeignKey("InductionProgrammeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InductionCase");
+
+                    b.Navigation("InductionProgramme");
+                });
+
             modelBuilder.Entity("Namfisa.Induction.Models.SignOff", b =>
                 {
                     b.HasOne("Namfisa.Induction.Models.InductionCase", "InductionCase")
@@ -782,6 +863,8 @@ namespace Namfisa.Induction.Migrations
                 {
                     b.Navigation("EmployeeFeedback");
 
+                    b.Navigation("ProgrammeAttendance");
+
                     b.Navigation("SignOffs");
 
                     b.Navigation("Tasks");
@@ -791,6 +874,8 @@ namespace Namfisa.Induction.Migrations
 
             modelBuilder.Entity("Namfisa.Induction.Models.InductionProgramme", b =>
                 {
+                    b.Navigation("Attendances");
+
                     b.Navigation("Participants");
 
                     b.Navigation("Sessions");

@@ -40,6 +40,9 @@ public class InductionProgrammeSessionInputModel
     [Required, StringLength(150), Display(Name = "Presenter")]
     public string PresenterName { get; set; } = string.Empty;
 
+    [Required, StringLength(150), RegularExpression(@"^[^\\]+\\[^\\]+$", ErrorMessage = "Use the AD ID format DOMAIN\\username."), Display(Name = "Presenter AD ID")]
+    public string PresenterUsername { get; set; } = string.Empty;
+
     [Required, DataType(DataType.Time), Display(Name = "Start time")]
     public TimeSpan? StartTime { get; set; }
 
@@ -63,3 +66,42 @@ public class InductionProgrammeReportViewModel
 public record DivisionRatingSummary(string Division, string Presenter, double Average, int Responses);
 public record RatingCountSummary(int Rating, int Count);
 public record NamedCountSummary(string Label, int Count);
+
+public class PresenterProgrammeViewModel
+{
+    public required InductionProgramme Programme { get; set; }
+    public required IReadOnlyList<PresenterAttendeeViewModel> Attendees { get; set; }
+    public bool SmtpConfigured { get; set; }
+    public string SmtpSummary { get; set; } = string.Empty;
+}
+
+public class PresenterAttendeeViewModel
+{
+    public required InductionCase Induction { get; set; }
+    public ProgrammeAttendanceStatus Status { get; set; }
+    public DateTime? ConfirmedAtUtc { get; set; }
+    public string? ConfirmedBy { get; set; }
+    public string? ConfirmationSource { get; set; }
+    public DateTime? InvitationSentAtUtc { get; set; }
+}
+
+public class SendAttendanceInvitationsViewModel
+{
+    [Required]
+    public int ProgrammeId { get; set; }
+
+    [Required, MinLength(1)]
+    public int[] InductionCaseIds { get; set; } = [];
+}
+
+public class UpdateProgrammeAttendanceViewModel
+{
+    [Required]
+    public int ProgrammeId { get; set; }
+
+    [Required]
+    public int InductionCaseId { get; set; }
+
+    [Required]
+    public ProgrammeAttendanceStatus Status { get; set; }
+}

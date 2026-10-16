@@ -1,0 +1,48 @@
+@model IReadOnlyList<InductionProgramme>
+@{
+    ViewData["Title"] = "Presenter workspace";
+}
+
+<section class="page-heading">
+    <p class="eyebrow">Induction instructors and presenters</p>
+    <h1>Presenter workspace</h1>
+    <p class="lead-copy">Open a programme to confirm attendees and send employee attendance links.</p>
+</section>
+
+@if (Model.Count == 0)
+{
+    <div class="content-card empty-state py-5">
+        <h2>No programmes assigned</h2>
+        <p>Your AD ID is not currently assigned as a presenter on an induction programme.</p>
+    </div>
+}
+else
+{
+    <div class="programme-grid">
+        @foreach (var programme in Model)
+        {
+            var present = programme.Attendances.Count(x => x.Status == ProgrammeAttendanceStatus.Present);
+            var absent = programme.Attendances.Count(x => x.Status == ProgrammeAttendanceStatus.Absent);
+            var pending = Math.Max(0, programme.Participants.Count - present - absent);
+            <article class="content-card presenter-programme-card">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div><p class="eyebrow mb-1">@programme.ProgrammeDate.ToString("dd MMM yyyy")</p><h2>@programme.Title</h2><p>@(programme.Venue ?? "Venue to be confirmed")</p></div>
+                    <span class="programme-status programme-status-@programme.Status.ToString().ToLowerInvariant()">@programme.Status</span>
+                </div>
+                <div class="attendance-summary-strip">
+                    <span><strong>@programme.Participants.Count</strong>Total</span>
+                    <span class="present"><strong>@present</strong>Present</span>
+                    <span class="absent"><strong>@absent</strong>Absent</span>
+                    <span><strong>@pending</strong>Pending</span>
+                </div>
+                <div class="presenter-list">
+                    @foreach (var session in programme.Sessions.OrderBy(x => x.SortOrder))
+                    {
+                        <span>@session.Division <small>@session.PresenterName</small></span>
+                    }
+                </div>
+                <a class="btn btn-primary w-100" asp-action="Programme" asp-route-id="@programme.Id">Manage attendance</a>
+            </article>
+        }
+    </div>
+}

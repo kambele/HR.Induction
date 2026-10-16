@@ -11,6 +11,8 @@ public interface IUserAccessService
     bool CanView(ClaimsPrincipal user, InductionCase inductionCase);
     bool CanComplete(ClaimsPrincipal user, InductionTask task);
     bool CanSubmitFeedback(ClaimsPrincipal user, InductionCase inductionCase);
+    bool CanManageProgrammeAttendance(ClaimsPrincipal user, InductionProgramme programme);
+    bool CanSelfConfirmAttendance(ClaimsPrincipal user, InductionCase inductionCase);
     bool CanSign(ClaimsPrincipal user, InductionCase inductionCase, SignOffRole role);
 }
 
@@ -55,6 +57,12 @@ public class UserAccessService(IConfiguration configuration, IWebHostEnvironment
 
     public bool CanSubmitFeedback(ClaimsPrincipal user, InductionCase inductionCase) =>
         IsHr(user) || Matches(CurrentUsername(user), inductionCase.EmployeeUsername);
+
+    public bool CanManageProgrammeAttendance(ClaimsPrincipal user, InductionProgramme programme) =>
+        IsHr(user) || programme.Sessions.Any(x => Matches(CurrentUsername(user), x.PresenterUsername));
+
+    public bool CanSelfConfirmAttendance(ClaimsPrincipal user, InductionCase inductionCase) =>
+        Matches(CurrentUsername(user), inductionCase.EmployeeUsername);
 
     public bool CanSign(ClaimsPrincipal user, InductionCase inductionCase, SignOffRole role)
     {

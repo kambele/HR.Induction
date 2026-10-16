@@ -1,0 +1,63 @@
+@model InductionCase
+@{
+    ViewData["Title"] = "Confirm attendance";
+    var programme = Model.InductionProgramme!;
+    var attendanceStatus = Model.ProgrammeAttendance?.Status ?? ProgrammeAttendanceStatus.Pending;
+}
+
+<section class="page-heading compact-heading">
+    <p class="eyebrow">Employee attendance</p>
+    <h1>Confirm your induction attendance</h1>
+    <p class="lead-copy">Your response is recorded against the Windows account <strong>@User.Identity?.Name</strong>.</p>
+</section>
+
+<div class="attendance-confirm-shell">
+    <div class="content-card attendance-confirm-card">
+        <span class="attendance-pill attendance-@attendanceStatus.ToString().ToLowerInvariant()">Current status: @attendanceStatus</span>
+        <h2>@programme.Title</h2>
+        <p class="attendance-employee">@Model.EmployeeName · @Model.Position</p>
+        <dl class="programme-facts">
+            <div><dt>Date</dt><dd>@programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy")</dd></div>
+            <div><dt>Venue</dt><dd>@(programme.Venue ?? "To be confirmed")</dd></div>
+            <div><dt>Presentations</dt><dd>@programme.Sessions.Count scheduled</dd></div>
+        </dl>
+
+        <div class="programme-agenda-list mb-4">
+            @foreach (var session in programme.Sessions.OrderBy(x => x.SortOrder))
+            {
+                <div>
+                    <time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time>
+                    <span><strong>@session.Division</strong><small>@session.PresenterName</small></span>
+                </div>
+            }
+        </div>
+
+        <form asp-action="Confirm" method="post">
+            <input type="hidden" name="inductionCaseId" value="@Model.Id" />
+            <p class="form-label">Select your attendance status</p>
+            <div class="attendance-choice-grid">
+                <button class="attendance-choice present @(attendanceStatus == ProgrammeAttendanceStatus.Present ? "is-selected" : null)" type="submit" name="status" value="Present">
+                    <span class="attendance-choice-icon">✓</span>
+                    <span><strong>I am present</strong><small>Confirm attendance and continue to feedback</small></span>
+                </button>
+                <button class="attendance-choice absent @(attendanceStatus == ProgrammeAttendanceStatus.Absent ? "is-selected" : null)" type="submit" name="status" value="Absent">
+                    <span class="attendance-choice-icon">×</span>
+                    <span><strong>I am absent</strong><small>Record that you did not attend this programme</small></span>
+                </button>
+            </div>
+        </form>
+
+        @if (attendanceStatus == ProgrammeAttendanceStatus.Present)
+        {
+            <div class="form-actions mt-4">
+                <a class="btn btn-primary" asp-controller="Inductions" asp-action="Feedback" asp-route-id="@Model.Id">@(Model.EmployeeFeedback is null ? "Continue to feedback" : "View submitted feedback")</a>
+                <a class="btn btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.Id">Open induction plan</a>
+            </div>
+        }
+
+        @if (Model.ProgrammeAttendance?.ConfirmedAtUtc is DateTime confirmedAt)
+        {
+            <p class="audit-line mt-4">Last confirmed by @Model.ProgrammeAttendance.ConfirmedBy on @confirmedAt.ToString("dd MMM yyyy HH:mm") UTC via @Model.ProgrammeAttendance.ConfirmationSource.</p>
+        }
+    </div>
+</div>

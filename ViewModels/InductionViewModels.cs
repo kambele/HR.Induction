@@ -133,6 +133,13 @@ public class EmployeeFeedbackInputModel
     public string? AdditionalComments { get; set; }
 }
 
+public class EmployeeFeedbackPageViewModel
+{
+    public required InductionCase Induction { get; set; }
+    public EmployeeFeedbackInputModel Feedback { get; set; } = new();
+    public ProgrammeAttendanceStatus AttendanceStatus { get; set; }
+}
+
 public class PresentationRatingInputModel
 {
     [Required]

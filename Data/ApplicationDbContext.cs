@@ -16,6 +16,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<InductionProgramme> InductionProgrammes => Set<InductionProgramme>();
     public DbSet<InductionProgrammeSession> InductionProgrammeSessions => Set<InductionProgrammeSession>();
     public DbSet<PresentationRating> PresentationRatings => Set<PresentationRating>();
+    public DbSet<ProgrammeAttendance> ProgrammeAttendances => Set<ProgrammeAttendance>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +56,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasForeignKey(x => x.InductionProgrammeId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<InductionProgramme>()
+            .HasMany(x => x.Attendances)
+            .WithOne(x => x.InductionProgramme)
+            .HasForeignKey(x => x.InductionProgrammeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<InductionCase>()
+            .HasOne(x => x.ProgrammeAttendance)
+            .WithOne(x => x.InductionCase)
+            .HasForeignKey<ProgrammeAttendance>(x => x.InductionCaseId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<EmployeeFeedback>()
             .HasMany(x => x.PresentationRatings)
             .WithOne(x => x.EmployeeFeedback)
@@ -81,6 +94,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         modelBuilder.Entity<InductionProgrammeSession>()
             .HasIndex(x => new { x.InductionProgrammeId, x.SortOrder });
+
+        modelBuilder.Entity<ProgrammeAttendance>()
+            .HasIndex(x => new { x.InductionProgrammeId, x.Status });
 
         modelBuilder.Entity<ChecklistTemplateItem>()
             .HasIndex(x => new { x.Phase, x.SortOrder });

@@ -183,6 +183,7 @@ public class InductionsController(
         if (!accessService.IsHr(User)) return Forbid();
         var inductionCase = await dbContext.InductionCases
             .Include(x => x.Tasks)
+            .Include(x => x.ProgrammeAttendance)
             .SingleOrDefaultAsync(x => x.Id == model.Id, HttpContext.RequestAborted);
         if (inductionCase is null) return NotFound();
 
@@ -211,6 +212,7 @@ public class InductionsController(
         }
 
         var previousAppointmentDate = inductionCase.AppointmentDate.Date;
+        var previousProgrammeId = inductionCase.InductionProgrammeId;
         inductionCase.EmployeeTitle = employeeTitle;
         inductionCase.FirstName = firstName;
         inductionCase.LastName = lastName;
@@ -228,6 +230,12 @@ public class InductionsController(
         inductionCase.LineManagerUsername = model.LineManagerUsername.Trim();
         inductionCase.HrBusinessPartnerName = model.HrBusinessPartnerName.Trim();
         inductionCase.HrBusinessPartnerUsername = model.HrBusinessPartnerUsername.Trim();
+
+        if (previousProgrammeId != inductionCase.InductionProgrammeId && inductionCase.ProgrammeAttendance is not null)
+        {
+            dbContext.ProgrammeAttendances.Remove(inductionCase.ProgrammeAttendance);
+            inductionCase.ProgrammeAttendance = null;
+        }
 
         if (previousAppointmentDate != inductionCase.AppointmentDate.Date)
         {
@@ -335,6 +343,7 @@ public class InductionsController(
                 .ThenInclude(x => x!.PresentationRatings)
                     .ThenInclude(x => x.InductionProgrammeSession)
             .Include(x => x.TrainingEvaluations)
+            .Include(x => x.ProgrammeAttendance)
             .Include(x => x.InductionProgramme)
                 .ThenInclude(x => x!.Sessions)
             .SingleOrDefaultAsync(x => x.Id == id);
@@ -355,6 +364,7 @@ public class InductionsController(
             SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,
             CanSubmitFeedback = inductionCase.EmployeeFeedback is null
                 && inductionCase.InductionProgramme?.Sessions.Count > 0
+                && inductionCase.ProgrammeAttendance?.Status == ProgrammeAttendanceStatus.Present
                 && accessService.CanSubmitFeedback(User, inductionCase),
             CanSignEmployee = accessService.CanSign(User, inductionCase, SignOffRole.Employee)
                 && (!settings.RequireEmployeeFeedbackBeforeSignOff || inductionCase.EmployeeFeedback is not null),
@@ -579,12 +589,33 @@ public class InductionsController(
         return RedirectToAction(nameof(Details), new { id = task.InductionCaseId });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Feedback(int id)
+    {
+        var inductionCase = await dbContext.InductionCases
+            .AsNoTracking()
+            .Include(x => x.EmployeeFeedback)
+                .ThenInclude(x => x!.PresentationRatings)
+                    .ThenInclude(x => x.InductionProgrammeSession)
+            .Include(x => x.ProgrammeAttendance)
+            .Include(x => x.InductionProgramme)
+                .ThenInclude(x => x!.Sessions)
+            .SingleOrDefaultAsync(x => x.Id == id, HttpContext.RequestAborted);
+
+        if (inductionCase is null) return NotFound();
+        if (!accessService.CanSubmitFeedback(User, inductionCase)) return Forbid();
+        if (inductionCase.InductionProgramme is null) return BadRequest("No induction programme is assigned to this employee.");
+
+        return View(BuildFeedbackPageModel(inductionCase));
+    }
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SubmitFeedback(EmployeeFeedbackInputModel model)
     {
         var inductionCase = await dbContext.InductionCases
             .Include(x => x.EmployeeFeedback)
+            .Include(x => x.ProgrammeAttendance)
             .Include(x => x.InductionProgramme)
                 .ThenInclude(x => x!.Sessions)
             .SingleOrDefaultAsync(x => x.Id == model.InductionCaseId);
@@ -594,7 +625,12 @@ public class InductionsController(
         if (inductionCase.EmployeeFeedback is not null)
         {
             TempData["Error"] = "Feedback has already been submitted.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return RedirectToAction(nameof(Feedback), new { id = inductionCase.Id });
+        }
+
+        if (inductionCase.ProgrammeAttendance?.Status != ProgrammeAttendanceStatus.Present)
+        {
+            ModelState.AddModelError(string.Empty, "Attendance must be confirmed as present before feedback can be submitted.");
         }
 
         var programmeSessions = inductionCase.InductionProgramme?.Sessions.OrderBy(x => x.SortOrder).ToList() ?? [];
@@ -613,8 +649,7 @@ public class InductionsController(
 
         if (!ModelState.IsValid)
         {
-            TempData["Error"] = "Complete every programme rating and feedback question before submitting.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return View("Feedback", BuildFeedbackPageModel(inductionCase, model));
         }
 
         inductionCase.EmployeeFeedback = new EmployeeFeedback
@@ -634,8 +669,24 @@ public class InductionsController(
 
         await dbContext.SaveChangesAsync();
         TempData["Success"] = "Employee induction feedback submitted.";
-        return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+        return RedirectToAction(nameof(Feedback), new { id = inductionCase.Id });
     }
+
+    private static EmployeeFeedbackPageViewModel BuildFeedbackPageModel(
+        InductionCase inductionCase,
+        EmployeeFeedbackInputModel? feedback = null) => new()
+    {
+        Induction = inductionCase,
+        AttendanceStatus = inductionCase.ProgrammeAttendance?.Status ?? ProgrammeAttendanceStatus.Pending,
+        Feedback = feedback ?? new EmployeeFeedbackInputModel
+        {
+            InductionCaseId = inductionCase.Id,
+            PresentationRatings = inductionCase.InductionProgramme?.Sessions
+                .OrderBy(x => x.SortOrder)
+                .Select(x => new PresentationRatingInputModel { ProgrammeSessionId = x.Id })
+                .ToList() ?? []
+        }
+    };
 
     [HttpPost]
     [ValidateAntiForgeryToken]

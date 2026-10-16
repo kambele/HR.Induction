@@ -1,0 +1,145 @@
+@model PresenterProgrammeViewModel
+@{
+    ViewData["Title"] = "Programme attendance";
+    var present = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Present);
+    var absent = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Absent);
+    var pending = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Pending);
+    var attendeesWithEmail = Model.Attendees.Count(x => !string.IsNullOrWhiteSpace(x.Induction.EmployeeEmail));
+}
+
+<section class="page-heading d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3">
+    <div>
+        <a class="back-link" asp-action="Index">&larr; Back to presenter workspace</a>
+        <p class="eyebrow">Instructor and presenter attendance</p>
+        <h1>@Model.Programme.Title</h1>
+        <p class="lead-copy">@Model.Programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy") · @(Model.Programme.Venue ?? "Venue to be confirmed")</p>
+    </div>
+    <button class="btn btn-primary btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#attendanceInviteModal" disabled="@(Model.Attendees.Count == 0 ? "disabled" : null)">Send attendance links</button>
+</section>
+
+<section class="row g-3 mb-4">
+    <div class="col-6 col-xl-3"><div class="metric-card"><span class="metric-label">Attendees</span><strong>@Model.Attendees.Count</strong><span class="metric-note">Assigned employees</span></div></div>
+    <div class="col-6 col-xl-3"><div class="metric-card metric-success"><span class="metric-label">Present</span><strong>@present</strong><span class="metric-note">Confirmed attendance</span></div></div>
+    <div class="col-6 col-xl-3"><div class="metric-card metric-danger"><span class="metric-label">Absent</span><strong>@absent</strong><span class="metric-note">Confirmed absence</span></div></div>
+    <div class="col-6 col-xl-3"><div class="metric-card metric-gold"><span class="metric-label">Pending</span><strong>@pending</strong><span class="metric-note">Awaiting response</span></div></div>
+</section>
+
+<div class="row g-4">
+    <section class="col-xl-8">
+        <div class="content-card p-0 overflow-hidden">
+            <div class="card-heading p-4 mb-0"><div><h2>Attendee register</h2><p>Employees can self-confirm from the emailed link, or a presenter can update the register here.</p></div></div>
+            @if (Model.Attendees.Count == 0)
+            {
+                <div class="empty-state py-5">No employees are assigned to this programme. Assign employees by editing their induction records.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table attendance-table align-middle mb-0">
+                        <thead><tr><th>Employee</th><th>Attendance</th><th>Confirmation</th><th class="text-end">Update</th></tr></thead>
+                        <tbody>
+                        @foreach (var attendee in Model.Attendees)
+                        {
+                            <tr>
+                                <td><strong>@attendee.Induction.EmployeeName</strong><span class="subtext">@attendee.Induction.Position</span><span class="subtext">@(attendee.Induction.EmployeeEmail ?? "Email not recorded")</span></td>
+                                <td><span class="attendance-pill attendance-@attendee.Status.ToString().ToLowerInvariant()">@attendee.Status</span></td>
+                                <td>
+                                    @if (attendee.ConfirmedAtUtc.HasValue)
+                                    {
+                                        <span>@attendee.ConfirmationSource</span><span class="subtext">@attendee.ConfirmedBy</span><span class="subtext">@attendee.ConfirmedAtUtc.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                                    }
+                                    else if (attendee.InvitationSentAtUtc.HasValue)
+                                    {
+                                        <span>Link sent</span><span class="subtext">@attendee.InvitationSentAtUtc.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not yet confirmed</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <form asp-action="UpdateAttendance" method="post"><input type="hidden" name="ProgrammeId" value="@Model.Programme.Id" /><input type="hidden" name="InductionCaseId" value="@attendee.Induction.Id" /><input type="hidden" name="Status" value="Present" /><button class="btn btn-sm @(attendee.Status == ProgrammeAttendanceStatus.Present ? "btn-success" : "btn-outline-success")" type="submit">Present</button></form>
+                                        <form asp-action="UpdateAttendance" method="post"><input type="hidden" name="ProgrammeId" value="@Model.Programme.Id" /><input type="hidden" name="InductionCaseId" value="@attendee.Induction.Id" /><input type="hidden" name="Status" value="Absent" /><button class="btn btn-sm @(attendee.Status == ProgrammeAttendanceStatus.Absent ? "btn-danger" : "btn-outline-danger")" type="submit">Absent</button></form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </section>
+    <aside class="col-xl-4">
+        <div class="content-card">
+            <div class="card-heading"><div><h2>Programme schedule</h2><p>Presenters authorised for this workspace.</p></div></div>
+            <div class="programme-agenda-list">
+                @foreach (var session in Model.Programme.Sessions.OrderBy(x => x.SortOrder))
+                {
+                    <div><time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time><span><strong>@session.Division</strong><small>@session.PresenterName</small><code>@session.PresenterUsername</code></span></div>
+                }
+            </div>
+        </div>
+    </aside>
+</div>
+
+<div class="modal fade" id="attendanceInviteModal" tabindex="-1" aria-labelledby="attendanceInviteTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content invitation-modal">
+            <form asp-action="SendAttendanceInvitations" method="post">
+                <input type="hidden" name="ProgrammeId" value="@Model.Programme.Id" />
+                <div class="modal-header">
+                    <div><p class="eyebrow mb-1">Attendance invitations</p><h2 class="modal-title fs-4" id="attendanceInviteTitle">Send employee check-in links</h2></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!Model.SmtpConfigured)
+                    {
+                        <div class="alert alert-warning"><strong>Email delivery is not ready.</strong> @Model.SmtpSummary</div>
+                    }
+                    <div class="invitation-selection-toolbar">
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAllAttendance" disabled="@(attendeesWithEmail == 0 ? "disabled" : null)" /><label class="form-check-label" for="selectAllAttendance">Select all attendees with email</label></div>
+                        <span id="attendanceSelectedCount">0 selected</span>
+                    </div>
+                    <div class="invitation-list">
+                        @foreach (var attendee in Model.Attendees)
+                        {
+                            var hasEmail = !string.IsNullOrWhiteSpace(attendee.Induction.EmployeeEmail);
+                            <label class="invitation-choice @(hasEmail ? string.Empty : "is-unavailable")" for="attendance-invite-@attendee.Induction.Id">
+                                <input class="form-check-input attendance-invite-checkbox" type="checkbox" name="InductionCaseIds" value="@attendee.Induction.Id" id="attendance-invite-@attendee.Induction.Id" disabled="@(hasEmail ? null : "disabled")" />
+                                <span class="invitation-choice-copy"><strong>@attendee.Induction.EmployeeName</strong><span>@(hasEmail ? attendee.Induction.EmployeeEmail : "Email address not recorded")</span></span>
+                                <span class="invitation-choice-status">@(attendee.InvitationSentAtUtc.HasValue ? $"Last sent {attendee.InvitationSentAtUtc.Value.ToLocalTime():dd MMM yyyy HH:mm}" : attendee.Status.ToString())</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="sendAttendanceInvitations" type="submit" data-smtp-ready="@Model.SmtpConfigured.ToString().ToLowerInvariant()" disabled>Send links</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const checkboxes = [...document.querySelectorAll('.attendance-invite-checkbox:not(:disabled)')];
+            const selectAll = document.getElementById('selectAllAttendance');
+            const count = document.getElementById('attendanceSelectedCount');
+            const send = document.getElementById('sendAttendanceInvitations');
+            if (!selectAll || !count || !send) return;
+            const smtpReady = send.dataset.smtpReady === 'true';
+            const refresh = () => {
+                const selected = checkboxes.filter(item => item.checked).length;
+                count.textContent = `${selected} selected`;
+                send.disabled = !smtpReady || selected === 0;
+                send.textContent = selected === 0 ? 'Send links' : `Send ${selected} link${selected === 1 ? '' : 's'}`;
+                selectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
+                selectAll.indeterminate = selected > 0 && selected < checkboxes.length;
+            };
+            selectAll.addEventListener('change', () => { checkboxes.forEach(item => item.checked = selectAll.checked); refresh(); });
+            checkboxes.forEach(item => item.addEventListener('change', refresh));
+            refresh();
+        })();
+    </script>
+}

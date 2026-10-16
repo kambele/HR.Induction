@@ -1,0 +1,156 @@
+@model EmployeeFeedbackPageViewModel
+@inject Namfisa.Induction.Services.IUserAccessService AccessService
+@{
+    ViewData["Title"] = "Induction feedback";
+    var induction = Model.Induction;
+    var programme = induction.InductionProgramme!;
+    var sessions = programme.Sessions.OrderBy(x => x.SortOrder).ToList();
+    string RatingText(int? rating) => rating switch
+    {
+        5 => "Excellent / Strongly agree",
+        4 => "Very good / Agree",
+        3 => "Good / Neutral",
+        2 => "Fair / Disagree",
+        1 => "Poor / Strongly disagree",
+        _ => "Not provided"
+    };
+    string AllocationText(TimeAllocationResponse? response) => response switch
+    {
+        TimeAllocationResponse.Appropriate => "Appropriate",
+        TimeAllocationResponse.TooShort => "Too short",
+        TimeAllocationResponse.TooLong => "Too long",
+        _ => "Not provided"
+    };
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="Details" asp-route-id="@induction.Id">&larr; Back to induction</a>
+    <p class="eyebrow">Employee feedback</p>
+    <h1>@programme.Title</h1>
+    <p class="lead-copy">@programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy") · @(programme.Venue ?? "Venue to be confirmed")</p>
+</section>
+
+<div class="row g-4 align-items-start">
+    <aside class="col-xl-4">
+        <div class="content-card feedback-programme-summary">
+            <span class="attendance-pill attendance-@Model.AttendanceStatus.ToString().ToLowerInvariant()">Attendance: @Model.AttendanceStatus</span>
+            <h2>@induction.EmployeeName</h2>
+            <p>@induction.Position</p>
+            <div class="programme-agenda-list">
+                @foreach (var session in sessions)
+                {
+                    <div>
+                        <time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time>
+                        <span><strong>@session.Division</strong><small>@session.PresenterName</small></span>
+                    </div>
+                }
+            </div>
+        </div>
+    </aside>
+
+    <section class="col-xl-8">
+        <div class="content-card">
+            @if (induction.EmployeeFeedback is not null)
+            {
+                var submitted = induction.EmployeeFeedback;
+                <div class="card-heading">
+                    <div><p class="eyebrow mb-1">Completed</p><h2>Feedback submitted</h2><p>Your response has been recorded and cannot be submitted twice.</p></div>
+                    <span class="status-badge status-completed">Submitted</span>
+                </div>
+                <div class="submitted-ratings mb-4">
+                    @foreach (var rating in submitted.PresentationRatings.OrderBy(x => x.InductionProgrammeSession.SortOrder))
+                    {
+                        <div><span>@rating.InductionProgrammeSession.Division<small>@rating.InductionProgrammeSession.PresenterName</small></span><strong>@rating.Rating/5</strong></div>
+                    }
+                </div>
+                <dl class="feedback-summary">
+                    <div><dt>Understanding of the organisation</dt><dd>@RatingText(submitted.ProgrammeUnderstandingRating)</dd></div>
+                    <div><dt>Presentation time allocation</dt><dd>@AllocationText(submitted.TimeAllocationResponse)</dd></div>
+                    <div><dt>Overall programme</dt><dd>@RatingText(submitted.OverallProgrammeRating)</dd></div>
+                    <div><dt>Most valuable aspect</dt><dd>@submitted.MostValuableAspect</dd></div>
+                    <div><dt>Recommended improvements</dt><dd>@submitted.ImprovementRecommendations</dd></div>
+                </dl>
+                <p class="audit-line">Submitted by @submitted.SubmittedBy on @submitted.SubmittedAtUtc.ToString("dd MMM yyyy HH:mm") UTC</p>
+            }
+            else if (Model.AttendanceStatus != ProgrammeAttendanceStatus.Present)
+            {
+                <div class="empty-state py-5">
+                    <h2>Confirm attendance first</h2>
+                    <p>Your attendance must be marked present before this feedback form becomes available.</p>
+                    @if (AccessService.CanSelfConfirmAttendance(User, induction))
+                    {
+                        <a class="btn btn-primary" asp-controller="Attendance" asp-action="Confirm" asp-route-id="@induction.Id">Confirm attendance</a>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="card-heading">
+                    <div><p class="eyebrow mb-1">Corporate induction evaluation</p><h2>Rate every presentation</h2><p>Use the 1–5 scale, then complete the overall programme questions.</p></div>
+                </div>
+                <form asp-action="SubmitFeedback" method="post">
+                    <input type="hidden" name="InductionCaseId" value="@induction.Id" />
+                    <div asp-validation-summary="All" class="alert alert-danger"></div>
+                    <div class="programme-rating-table mb-4">
+                        <div class="programme-rating-header"><span>Divisional presentation</span><span>Rating</span></div>
+                        @for (var index = 0; index < sessions.Count; index++)
+                        {
+                            var session = sessions[index];
+                            var selectedRating = Model.Feedback.PresentationRatings.FirstOrDefault(x => x.ProgrammeSessionId == session.Id)?.Rating;
+                            <div class="programme-rating-row">
+                                <input type="hidden" name="PresentationRatings[@index].ProgrammeSessionId" value="@session.Id" />
+                                <label for="presentation-rating-@session.Id"><strong>@session.Division</strong><small>@session.PresenterName · @session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</small></label>
+                                <select class="form-select" id="presentation-rating-@session.Id" name="PresentationRatings[@index].Rating" required>
+                                    <option value="">Select</option>
+                                    <option value="1" selected="@(selectedRating == 1 ? "selected" : null)">1 - Poor</option>
+                                    <option value="2" selected="@(selectedRating == 2 ? "selected" : null)">2 - Fair</option>
+                                    <option value="3" selected="@(selectedRating == 3 ? "selected" : null)">3 - Good</option>
+                                    <option value="4" selected="@(selectedRating == 4 ? "selected" : null)">4 - Very good</option>
+                                    <option value="5" selected="@(selectedRating == 5 ? "selected" : null)">5 - Excellent</option>
+                                </select>
+                            </div>
+                        }
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="programme-understanding">The programme provided a good understanding of the organisation and its divisions</label>
+                        <select class="form-select" id="programme-understanding" name="ProgrammeUnderstandingRating" required>
+                            <option value="">Select response</option>
+                            <option value="5" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 5 ? "selected" : null)">Strongly agree</option>
+                            <option value="4" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 4 ? "selected" : null)">Agree</option>
+                            <option value="3" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 3 ? "selected" : null)">Neutral</option>
+                            <option value="2" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 2 ? "selected" : null)">Disagree</option>
+                            <option value="1" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 1 ? "selected" : null)">Strongly disagree</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="time-allocation">The time allocation for each divisional presentation was appropriate</label>
+                        <select class="form-select" id="time-allocation" name="TimeAllocationResponse" required>
+                            <option value="">Select response</option>
+                            <option value="Appropriate" selected="@(Model.Feedback.TimeAllocationResponse == TimeAllocationResponse.Appropriate ? "selected" : null)">Yes, appropriate</option>
+                            <option value="TooShort" selected="@(Model.Feedback.TimeAllocationResponse == TimeAllocationResponse.TooShort ? "selected" : null)">Too short</option>
+                            <option value="TooLong" selected="@(Model.Feedback.TimeAllocationResponse == TimeAllocationResponse.TooLong ? "selected" : null)">Too long</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="overall-rating">Overall corporate induction programme rating</label>
+                        <select class="form-select" id="overall-rating" name="OverallProgrammeRating" required>
+                            <option value="">Select rating</option>
+                            <option value="5" selected="@(Model.Feedback.OverallProgrammeRating == 5 ? "selected" : null)">Excellent</option>
+                            <option value="4" selected="@(Model.Feedback.OverallProgrammeRating == 4 ? "selected" : null)">Very good</option>
+                            <option value="3" selected="@(Model.Feedback.OverallProgrammeRating == 3 ? "selected" : null)">Good</option>
+                            <option value="2" selected="@(Model.Feedback.OverallProgrammeRating == 2 ? "selected" : null)">Fair</option>
+                            <option value="1" selected="@(Model.Feedback.OverallProgrammeRating == 1 ? "selected" : null)">Poor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3"><label class="form-label" for="valuable-aspect">What was the most valuable aspect of the induction programme?</label><textarea class="form-control" id="valuable-aspect" name="MostValuableAspect" rows="4" maxlength="2000" required>@Model.Feedback.MostValuableAspect</textarea></div>
+                    <div class="mb-4"><label class="form-label" for="improvements">What improvements would you recommend for future induction programmes?</label><textarea class="form-control" id="improvements" name="ImprovementRecommendations" rows="4" maxlength="2000" required>@Model.Feedback.ImprovementRecommendations</textarea></div>
+                    <button class="btn btn-primary btn-lg" type="submit">Submit feedback</button>
+                </form>
+            }
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
