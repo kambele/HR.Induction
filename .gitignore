@@ -1,6 +1,4 @@
-bin/
-obj/
-publish/
+.vs/
 *.user
 *.suo
 *.db
