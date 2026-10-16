@@ -1,0 +1,204 @@
+@model IReadOnlyList<InductionCase>
+@{
+    ViewData["Title"] = "Inductions";
+    var selectedStatus = ViewBag.Status as InductionStatus?;
+    var isHr = ViewBag.IsHr is true;
+    var smtpConfigured = ViewBag.SmtpConfigured is true;
+    var smtpSummary = ViewBag.SmtpSummary as string ?? "SMTP email is not configured.";
+    var invitationsAvailable = Model.Count(x => !string.IsNullOrWhiteSpace(x.EmployeeEmail));
+}
+
+<section class="page-heading d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3">
+    <div>
+        <p class="eyebrow">Employee Services</p>
+        <h1>Employee inductions</h1>
+        <p class="lead-copy">Review active, completed and upcoming induction plans.</p>
+    </div>
+    @if (isHr)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-outline-primary btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#inviteEmployeesModal" disabled="@(Model.Count == 0 ? "disabled" : null)">Invite employees</button>
+            <a class="btn btn-outline-primary btn-lg" asp-action="Import">Import plans</a>
+            <a class="btn btn-primary btn-lg" asp-action="Create">Create induction</a>
+        </div>
+    }
+</section>
+
+<div class="content-card mb-4">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-7">
+            <label class="form-label" for="search">Search</label>
+            <input class="form-control" id="search" name="search" value="@ViewBag.Search" placeholder="Employee, email, employee number, department or division" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label" for="status">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All statuses</option>
+                @foreach (var status in Enum.GetValues<InductionStatus>())
+                {
+                    <option value="@status" selected="@(selectedStatus == status ? "selected" : null)">@DisplayText.For(status)</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-2 d-grid">
+            <button class="btn btn-outline-primary" type="submit">Filter</button>
+        </div>
+    </form>
+</div>
+
+<div class="content-card p-0 overflow-hidden">
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state py-5">No induction plans match your search.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle induction-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Appointment</th>
+                        <th>Progress</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var induction in Model)
+                {
+                    var completed = induction.Tasks.Count(x => x.Status != InductionTaskStatus.NotStarted);
+                    var progress = induction.Tasks.Count == 0 ? 0 : (int)Math.Round(completed * 100d / induction.Tasks.Count);
+                    <tr>
+                        <td>
+                            <strong>@induction.EmployeeName</strong>
+                            <span class="subtext">@(induction.EmployeeNumber ?? induction.EmployeeUsername)</span>
+                            <span class="subtext">@(induction.EmployeeEmail ?? "Email not recorded")</span>
+                        </td>
+                        <td>@induction.Department<span class="subtext">@induction.Division</span></td>
+                        <td>@induction.AppointmentDate.ToString("dd MMM yyyy")</td>
+                        <td class="progress-cell">
+                            <div class="progress" role="progressbar" aria-label="Induction progress" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" style="width: @progress%"></div>
+                            </div>
+                            <span>@progress%</span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-@induction.Status.ToString().ToLowerInvariant()">@DisplayText.For(induction.Status)</span>
+                            @if (induction.InvitationSentAtUtc.HasValue)
+                            {
+                                <span class="subtext invitation-sent">Invited @induction.InvitationSentAtUtc.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="subtext">Invitation not sent</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@induction.Id">Open</a>
+                                @if (isHr)
+                                {
+                                    <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@induction.Id">Edit</a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (isHr)
+{
+    <div class="modal fade" id="inviteEmployeesModal" tabindex="-1" aria-labelledby="inviteEmployeesTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content invitation-modal">
+                <form asp-action="SendInvitations" method="post" id="inviteEmployeesForm">
+                    <div class="modal-header">
+                        <div>
+                            <p class="eyebrow mb-1">Employee invitations</p>
+                            <h2 class="modal-title fs-4" id="inviteEmployeesTitle">Select induction plans to invite</h2>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!smtpConfigured)
+                        {
+                            <div class="alert alert-warning mb-3"><strong>Email delivery is not ready.</strong> @smtpSummary</div>
+                        }
+                        <div class="invitation-selection-toolbar">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAllInvitations" disabled="@(invitationsAvailable == 0 ? "disabled" : null)" />
+                                <label class="form-check-label" for="selectAllInvitations">Select all employees with an email address</label>
+                            </div>
+                            <span id="invitationSelectedCount">0 selected</span>
+                        </div>
+                        <div class="invitation-list">
+                            @foreach (var induction in Model)
+                            {
+                                var hasEmail = !string.IsNullOrWhiteSpace(induction.EmployeeEmail);
+                                <label class="invitation-choice @(hasEmail ? string.Empty : "is-unavailable")" for="invite-@induction.Id">
+                                    @if (hasEmail)
+                                    {
+                                        <input class="form-check-input invite-case-checkbox" type="checkbox" name="InductionCaseIds" value="@induction.Id" id="invite-@induction.Id" />
+                                    }
+                                    else
+                                    {
+                                        <input class="form-check-input" type="checkbox" id="invite-@induction.Id" disabled />
+                                    }
+                                    <span class="invitation-choice-copy">
+                                        <strong>@induction.EmployeeName</strong>
+                                        <span>@(hasEmail ? induction.EmployeeEmail : "Email address not recorded")</span>
+                                    </span>
+                                    <span class="invitation-choice-status">
+                                        @(induction.InvitationSentAtUtc.HasValue ? $"Last sent {induction.InvitationSentAtUtc.Value.ToLocalTime():dd MMM yyyy HH:mm}" : "Not yet invited")
+                                    </span>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="sendInvitationsButton" data-smtp-ready="@smtpConfigured.ToString().ToLowerInvariant()" disabled>Send invitations</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    @if (isHr)
+    {
+        <script>
+            (() => {
+                const checkboxes = [...document.querySelectorAll('.invite-case-checkbox')];
+                const selectAll = document.getElementById('selectAllInvitations');
+                const selectedCount = document.getElementById('invitationSelectedCount');
+                const sendButton = document.getElementById('sendInvitationsButton');
+                if (!selectAll || !selectedCount || !sendButton) return;
+                const smtpReady = sendButton.dataset.smtpReady === 'true';
+
+                const refresh = () => {
+                    const checked = checkboxes.filter(item => item.checked).length;
+                    selectedCount.textContent = `${checked} selected`;
+                    sendButton.disabled = !smtpReady || checked === 0;
+                    sendButton.textContent = checked === 0 ? 'Send invitations' : `Send ${checked} invitation${checked === 1 ? '' : 's'}`;
+                    selectAll.checked = checkboxes.length > 0 && checked === checkboxes.length;
+                    selectAll.indeterminate = checked > 0 && checked < checkboxes.length;
+                };
+
+                selectAll.addEventListener('change', () => {
+                    checkboxes.forEach(item => item.checked = selectAll.checked);
+                    refresh();
+                });
+                checkboxes.forEach(item => item.addEventListener('change', refresh));
+                refresh();
+            })();
+        </script>
+    }
+}

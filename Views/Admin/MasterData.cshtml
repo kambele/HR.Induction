@@ -1,0 +1,62 @@
+@model MasterDataListViewModel
+@{
+    ViewData["Title"] = "Master data";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="Index">&larr; Back to administration</a>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+        <div><p class="eyebrow">Administration</p><h1>Master data</h1><p class="lead-copy">Values marked active are available when HR creates inductions and configures checklist activities.</p></div>
+        <a class="btn btn-primary" asp-action="CreateMasterData" asp-route-category="@Model.Category">Add master data</a>
+    </div>
+</section>
+
+<form method="get" class="content-card admin-filter-bar mb-4">
+    <div>
+        <label class="form-label" for="category">Data type</label>
+        <select class="form-select" id="category" name="category">
+            <option value="">All data types</option>
+            @foreach (var category in Enum.GetValues<MasterDataCategory>().Where(x => x != MasterDataCategory.Position))
+            {
+                <option value="@category" selected="@(Model.Category == category ? "selected" : null)">@DisplayText.For(category)</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label" for="search">Search</label>
+        <input class="form-control" id="search" name="search" value="@Model.Search" placeholder="Name or description" />
+    </div>
+    <button class="btn btn-outline-primary" type="submit">Apply filters</button>
+    <a class="btn btn-outline-secondary" asp-action="MasterData">Clear</a>
+</form>
+
+<div class="content-card p-0 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 admin-table">
+            <thead><tr><th>Data type</th><th>Name</th><th>Order</th><th>Status</th><th>Last updated</th><th></th></tr></thead>
+            <tbody>
+            @if (Model.Items.Count == 0)
+            {
+                <tr><td colspan="6"><div class="empty-state">No master data matches the selected filters.</div></td></tr>
+            }
+            else
+            {
+                @foreach (var item in Model.Items)
+                {
+                    <tr class="@(!item.IsActive ? "admin-row-inactive" : null)">
+                        <td><span class="master-type">@DisplayText.For(item.Category)</span></td>
+                        <td><strong>@item.Name</strong>@if (!string.IsNullOrWhiteSpace(item.Description)) { <span class="subtext">@item.Description</span> }</td>
+                        <td>@item.SortOrder</td>
+                        <td><span class="admin-status @(item.IsActive ? "is-active" : "is-inactive")">@(item.IsActive ? "Active" : "Archived")</span></td>
+                        <td><span>@item.UpdatedAtUtc.ToString("dd MMM yyyy HH:mm") UTC</span><span class="subtext">@item.UpdatedBy</span></td>
+                        <td class="text-end admin-row-actions">
+                            <a class="btn btn-sm btn-outline-secondary" asp-action="EditMasterData" asp-route-id="@item.Id">Edit</a>
+                            <form asp-action="ToggleMasterData" method="post"><input type="hidden" name="id" value="@item.Id" /><button class="btn btn-sm @(item.IsActive ? "btn-outline-danger" : "btn-outline-primary")" type="submit">@(item.IsActive ? "Archive" : "Activate")</button></form>
+                        </td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

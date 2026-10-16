@@ -1,0 +1,49 @@
+@model EditInductionViewModel
+@{
+    ViewData["Title"] = "Edit induction";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="Details" asp-route-id="@Model.Id">&larr; Back to induction</a>
+    <p class="eyebrow">HR business partner</p>
+    <h1>Edit induction record</h1>
+    <p class="lead-copy">Update employee details, responsible people, appointment date and the assigned corporate induction programme.</p>
+</section>
+
+<form asp-action="Edit" method="post" class="content-card form-card">
+    <input asp-for="Id" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <fieldset>
+        <legend>Employee details</legend>
+        <div class="row g-3">
+            <div class="col-md-2"><label asp-for="EmployeeTitle" class="form-label"></label><select asp-for="EmployeeTitle" asp-items="Model.EmployeeTitleOptions" class="form-select"><option value="">Select title</option></select><span asp-validation-for="EmployeeTitle" class="text-danger"></span></div>
+            <div class="col-md-5"><label asp-for="FirstName" class="form-label"></label><input asp-for="FirstName" class="form-control" autocomplete="given-name" /><span asp-validation-for="FirstName" class="text-danger"></span></div>
+            <div class="col-md-5"><label asp-for="LastName" class="form-label"></label><input asp-for="LastName" class="form-control" autocomplete="family-name" /><span asp-validation-for="LastName" class="text-danger"></span></div>
+            <div class="col-md-4"><label asp-for="EmployeeNumber" class="form-label"></label><input asp-for="EmployeeNumber" class="form-control" /><span asp-validation-for="EmployeeNumber" class="text-danger"></span></div>
+            <div class="col-md-4"><label asp-for="Gender" class="form-label"></label><select asp-for="Gender" asp-items="Model.GenderOptions" class="form-select"><option value="">Select gender</option></select><span asp-validation-for="Gender" class="text-danger"></span></div>
+            <div class="col-md-4"><label asp-for="Position" class="form-label"></label><input asp-for="Position" class="form-control" maxlength="150" /><div class="form-text">Position remains short free text.</div><span asp-validation-for="Position" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="EmployeeUsername" class="form-label"></label><input asp-for="EmployeeUsername" class="form-control" placeholder="DOMAIN\username" /><span asp-validation-for="EmployeeUsername" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="EmployeeEmail" class="form-label"></label><input asp-for="EmployeeEmail" class="form-control" autocomplete="email" /><span asp-validation-for="EmployeeEmail" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="AppointmentDate" class="form-label"></label><input asp-for="AppointmentDate" class="form-control" /><span asp-validation-for="AppointmentDate" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="InductionProgrammeId" class="form-label"></label><select asp-for="InductionProgrammeId" asp-items="Model.ProgrammeOptions" class="form-select"><option value="">Not assigned</option></select><span asp-validation-for="InductionProgrammeId" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="Department" class="form-label"></label><select asp-for="Department" asp-items="Model.DepartmentOptions" class="form-select"><option value="">Select department</option></select><span asp-validation-for="Department" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="Division" class="form-label"></label><select asp-for="Division" asp-items="Model.DivisionOptions" class="form-select"><option value="">Select division</option></select><span asp-validation-for="Division" class="text-danger"></span></div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Responsible people</legend>
+        <div class="row g-3">
+            <div class="col-md-6"><label asp-for="LineManagerName" class="form-label"></label><input asp-for="LineManagerName" class="form-control" /><span asp-validation-for="LineManagerName" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="LineManagerUsername" class="form-label"></label><input asp-for="LineManagerUsername" class="form-control" placeholder="DOMAIN\username" /><span asp-validation-for="LineManagerUsername" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="HrBusinessPartnerName" class="form-label"></label><input asp-for="HrBusinessPartnerName" class="form-control" /><span asp-validation-for="HrBusinessPartnerName" class="text-danger"></span></div>
+            <div class="col-md-6"><label asp-for="HrBusinessPartnerUsername" class="form-label"></label><input asp-for="HrBusinessPartnerUsername" class="form-control" placeholder="DOMAIN\username" /><span asp-validation-for="HrBusinessPartnerUsername" class="text-danger"></span></div>
+        </div>
+    </fieldset>
+
+    <div class="alert alert-info">Changing an appointment date recalculates due dates only for checklist items that have not started. Existing signatures and completed activity audit records are preserved.</div>
+    <div class="form-actions"><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a><button class="btn btn-primary" type="submit">Save induction record</button></div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,29 @@
+@model ChecklistTemplateEditViewModel
+@{
+    var editing = Model.Id.HasValue;
+    ViewData["Title"] = editing ? "Edit checklist activity" : "Add checklist activity";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="ChecklistTemplates">&larr; Back to checklist activities</a>
+    <p class="eyebrow">Administration</p><h1>@(editing ? "Edit checklist activity" : "Add checklist activity")</h1>
+    <p class="lead-copy">The due offset is calculated from the employee's appointment date. Negative numbers schedule pre-start work.</p>
+</section>
+
+<form asp-action="@(editing ? "EditChecklistTemplate" : "CreateChecklistTemplate")" method="post" class="content-card form-card admin-editor-card">
+    @if (editing) { <input asp-for="Id" type="hidden" /> }
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="row g-4">
+        <div class="col-12"><label asp-for="Title" class="form-label"></label><textarea asp-for="Title" class="form-control" rows="3"></textarea><span asp-validation-for="Title" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="Phase" class="form-label"></label><select asp-for="Phase" class="form-select">@foreach (var phase in Enum.GetValues<InductionPhase>()) { <option value="@phase">@DisplayText.For(phase)</option> }</select><span asp-validation-for="Phase" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="Section" class="form-label"></label><select asp-for="Section" asp-items="Model.SectionOptions" class="form-select"><option value="">Select checklist section</option></select><span asp-validation-for="Section" class="text-danger"></span></div>
+        <div class="col-md-6"><label asp-for="ResponsibleRole" class="form-label"></label><select asp-for="ResponsibleRole" asp-items="Model.ResponsibleRoleOptions" class="form-select"><option value="">Select responsible role</option></select><span asp-validation-for="ResponsibleRole" class="text-danger"></span></div>
+        <div class="col-md-3"><label asp-for="DueOffsetDays" class="form-label"></label><input asp-for="DueOffsetDays" class="form-control" /><span asp-validation-for="DueOffsetDays" class="text-danger"></span></div>
+        <div class="col-md-3"><label asp-for="SortOrder" class="form-label"></label><input asp-for="SortOrder" class="form-control" /><span asp-validation-for="SortOrder" class="text-danger"></span></div>
+        <div class="col-md-6"><div class="form-check form-switch admin-switch"><input asp-for="IsMandatory" class="form-check-input" /><label asp-for="IsMandatory" class="form-check-label"></label></div></div>
+        <div class="col-md-6"><div class="form-check form-switch admin-switch"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label"></label></div></div>
+    </div>
+    <div class="form-actions"><a class="btn btn-outline-secondary" asp-action="ChecklistTemplates">Cancel</a><button class="btn btn-primary" type="submit">@(editing ? "Save changes" : "Create activity")</button></div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

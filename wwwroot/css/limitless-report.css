@@ -1,0 +1,24 @@
+.limitless-page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1.5rem; margin: -2rem calc(50% - 50vw) 1.5rem; padding: 2rem max(1rem, calc((100vw - 1320px)/2)); color: #fff; background: #263238; }
+.limitless-page-header h1 { margin: 0; color: #fff; font-size: clamp(1.8rem,4vw,2.7rem); letter-spacing: -.035em; }
+.limitless-page-header p:last-child { margin: .45rem 0 0; color: rgba(255,255,255,.68); }
+.limitless-page-header .back-link { color: #b9d8c4; }
+.limitless-page-header .eyebrow { color: #91cf49; }
+.limitless-stat-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.limitless-stat-grid article { position: relative; min-height: 132px; padding: 1.2rem 1.25rem; overflow: hidden; background: #fff; border: 1px solid #ddd; border-radius: .25rem; box-shadow: 0 2px 4px rgba(0,0,0,.04); }
+.limitless-stat-grid article::after { content: ""; position: absolute; inset: auto -28px -38px auto; width: 115px; height: 115px; border-radius: 50%; background: rgba(38,80,66,.06); }
+.limitless-stat-grid span, .limitless-stat-grid strong, .limitless-stat-grid small { display: block; }
+.limitless-stat-grid span { color: #777; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.limitless-stat-grid strong { margin: .55rem 0 .15rem; color: #263238; font-size: 2rem; }
+.limitless-stat-grid small { color: #8a8a8a; }
+.limitless-card { height: 100%; overflow: hidden; background: #fff; border: 1px solid #ddd; border-radius: .25rem; box-shadow: 0 2px 4px rgba(0,0,0,.04); }
+.limitless-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid #eee; }
+.limitless-card h2 { margin: 0; color: #333; font-size: 1rem; font-weight: 600; }
+.limitless-card header p { margin: .25rem 0 0; color: #888; font-size: .78rem; }
+.chart-library-badge { padding: .28rem .5rem; border-radius: .2rem; color: #fff; background: #607d8b; font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.limitless-chart { min-height: 370px; padding: 1rem; }
+.limitless-chart-compact { min-height: 250px; }
+.chart-empty { display: grid; place-items: center; min-height: inherit; color: #8a8a8a; text-align: center; }
+.d3-allocation-label { fill: #455a64; font-size: 12px; font-weight: 600; }
+.d3-allocation-value { fill: #fff; font-size: 12px; font-weight: 700; }
+@media (max-width: 991.98px) { .limitless-stat-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 767.98px) { .limitless-page-header { align-items: flex-start; flex-direction: column; margin-top: -1.25rem; } .limitless-stat-grid { grid-template-columns: 1fr; } .limitless-chart { min-height: 320px; } }

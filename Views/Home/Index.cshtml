@@ -1,0 +1,121 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<section class="page-heading d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3">
+    <div>
+        <p class="eyebrow">Employee Services</p>
+        <h1>Induction dashboard</h1>
+        <p class="lead-copy">Plan, track and complete every employee induction from one secure workspace.</p>
+    </div>
+    @if (Model.IsHr)
+    {
+        <a class="btn btn-primary btn-lg" asp-controller="Inductions" asp-action="Create">Create induction</a>
+    }
+</section>
+
+<section class="row g-3 mb-4" aria-label="Induction summary">
+    <div class="col-6 col-xl-3">
+        <div class="metric-card">
+            <span class="metric-label">Active inductions</span>
+            <strong>@Model.ActiveInductions</strong>
+            <span class="metric-note">Currently underway</span>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="metric-card metric-warning">
+            <span class="metric-label">Overdue tasks</span>
+            <strong>@Model.OverdueTasks</strong>
+            <span class="metric-note">Require attention</span>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="metric-card metric-gold">
+            <span class="metric-label">Awaiting sign-off</span>
+            <strong>@Model.AwaitingSignOff</strong>
+            <span class="metric-note">Ready for review</span>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="metric-card metric-success">
+            <span class="metric-label">Completed this month</span>
+            <strong>@Model.CompletedThisMonth</strong>
+            <span class="metric-note">Fully signed</span>
+        </div>
+    </div>
+</section>
+
+<div class="row g-4">
+    <section class="col-xl-7">
+        <div class="content-card h-100">
+            <div class="card-heading">
+                <div>
+                    <h2>Recent inductions</h2>
+                    <p>Latest employee plans and their current status.</p>
+                </div>
+                <a asp-controller="Inductions" asp-action="Index">View all</a>
+            </div>
+            @if (Model.RecentInductions.Count == 0)
+            {
+                <div class="empty-state">No induction plans have been created yet.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr><th>Employee</th><th>Start date</th><th>Status</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var induction in Model.RecentInductions)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@induction.EmployeeName</strong>
+                                    <span class="subtext">@induction.Department</span>
+                                </td>
+                                <td>@induction.AppointmentDate.ToString("dd MMM yyyy")</td>
+                                <td><span class="status-badge status-@induction.Status.ToString().ToLowerInvariant()">@DisplayText.For(induction.Status)</span></td>
+                                <td class="text-end"><a class="btn btn-sm btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@induction.Id">Open</a></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="col-xl-5">
+        <div class="content-card h-100">
+            <div class="card-heading">
+                <div>
+                    <h2>@(Model.IsHr ? "Priority tasks" : "My tasks")</h2>
+                    <p>Open items ordered by due date.</p>
+                </div>
+            </div>
+            @if (Model.MyOpenTasks.Count == 0)
+            {
+                <div class="empty-state">There are no open tasks assigned to you.</div>
+            }
+            else
+            {
+                <div class="task-list">
+                    @foreach (var task in Model.MyOpenTasks)
+                    {
+                        var overdue = task.DueDate.Date < DateTime.Today;
+                        <a class="task-list-item" asp-controller="Inductions" asp-action="Details" asp-route-id="@task.InductionCaseId">
+                            <span class="task-check" aria-hidden="true"></span>
+                            <span class="flex-grow-1">
+                                <strong>@task.Title</strong>
+                                <span>@task.InductionCase.EmployeeName · @task.ResponsibleRole</span>
+                            </span>
+                            <span class="@(overdue ? "due-overdue" : "due-date")">@task.DueDate.ToString("dd MMM")</span>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </section>
+</div>

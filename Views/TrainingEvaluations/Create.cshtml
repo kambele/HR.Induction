@@ -1,0 +1,179 @@
+@model TrainingEvaluationInputModel
+@{
+    ViewData["Title"] = "Training evaluation";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.InductionCaseId">&larr; Back to induction</a>
+    <p class="eyebrow">Training feedback</p>
+    <h1>Training evaluation</h1>
+    <p class="lead-copy">Participant: @ViewBag.EmployeeName. No response is selected by default.</p>
+</section>
+
+<form asp-action="Create" method="post" class="content-card form-card evaluation-form">
+    <input asp-for="InductionCaseId" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <fieldset>
+        <legend>Course details</legend>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="CourseTitle" class="form-label"></label>
+                <input asp-for="CourseTitle" class="form-control" />
+                <span asp-validation-for="CourseTitle" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="CourseProvider" class="form-label"></label>
+                <input asp-for="CourseProvider" class="form-control" />
+                <span asp-validation-for="CourseProvider" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="CourseDate" class="form-label"></label>
+                <input asp-for="CourseDate" class="form-control" />
+                <span asp-validation-for="CourseDate" class="text-danger"></span>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Training experience</legend>
+        <p class="form-guidance">Choose one response for every statement.</p>
+        <div class="table-responsive">
+            <table class="table rating-table align-middle">
+                <thead>
+                    <tr><th>Statement</th><th>Strongly agree</th><th>Agree</th><th>Disagree</th><th>Strongly disagree</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>The objectives of the training were clearly defined.</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesClearlyDefined, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesClearlyDefined, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesClearlyDefined, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesClearlyDefined, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                    <tr>
+                        <td>Participation and interaction were encouraged.</td>
+                        <td>@Html.RadioButtonFor(m => m.ParticipationEncouraged, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ParticipationEncouraged, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ParticipationEncouraged, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ParticipationEncouraged, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                    <tr>
+                        <td>The content was organised and easy to follow.</td>
+                        <td>@Html.RadioButtonFor(m => m.ContentOrganized, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ContentOrganized, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ContentOrganized, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ContentOrganized, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                    <tr>
+                        <td>The materials distributed were helpful.</td>
+                        <td>@Html.RadioButtonFor(m => m.MaterialsHelpful, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.MaterialsHelpful, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.MaterialsHelpful, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.MaterialsHelpful, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                    <tr>
+                        <td>This training experience will be useful in my work.</td>
+                        <td>@Html.RadioButtonFor(m => m.UsefulInWork, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.UsefulInWork, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.UsefulInWork, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.UsefulInWork, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                    <tr>
+                        <td>The training objectives were met.</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesMet, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesMet, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesMet, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.ObjectivesMet, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                    <tr>
+                        <td>The time allotted for the training was sufficient.</td>
+                        <td>@Html.RadioButtonFor(m => m.TimeSufficient, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.TimeSufficient, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.TimeSufficient, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.TimeSufficient, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                    <tr>
+                        <td>The meeting room and facilities were adequate and comfortable.</td>
+                        <td>@Html.RadioButtonFor(m => m.FacilitiesAdequate, 4, new { @class = "form-check-input", aria_label = "Strongly agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.FacilitiesAdequate, 3, new { @class = "form-check-input", aria_label = "Agree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.FacilitiesAdequate, 2, new { @class = "form-check-input", aria_label = "Disagree" })</td>
+                        <td>@Html.RadioButtonFor(m => m.FacilitiesAdequate, 1, new { @class = "form-check-input", aria_label = "Strongly disagree" })</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="text-danger small mb-3">
+            <span asp-validation-for="ObjectivesClearlyDefined"></span>
+            <span asp-validation-for="ParticipationEncouraged"></span>
+            <span asp-validation-for="ContentOrganized"></span>
+            <span asp-validation-for="MaterialsHelpful"></span>
+            <span asp-validation-for="UsefulInWork"></span>
+            <span asp-validation-for="ObjectivesMet"></span>
+            <span asp-validation-for="TimeSufficient"></span>
+            <span asp-validation-for="FacilitiesAdequate"></span>
+        </div>
+        <label asp-for="DisagreementImprovements" class="form-label"></label>
+        <textarea asp-for="DisagreementImprovements" class="form-control" rows="3"></textarea>
+    </fieldset>
+
+    <fieldset>
+        <legend>Your comments</legend>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="LikedMost" class="form-label"></label>
+                <textarea asp-for="LikedMost" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="CouldImprove" class="form-label"></label>
+                <textarea asp-for="CouldImprove" class="form-control" rows="4"></textarea>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Overall impression</label>
+                <div class="choice-row">
+                    <label>@Html.RadioButtonFor(m => m.OverallImpression, 4) Excellent</label>
+                    <label>@Html.RadioButtonFor(m => m.OverallImpression, 3) Good</label>
+                    <label>@Html.RadioButtonFor(m => m.OverallImpression, 2) Fair</label>
+                    <label>@Html.RadioButtonFor(m => m.OverallImpression, 1) Confusing</label>
+                </div>
+                <span asp-validation-for="OverallImpression" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="AdditionalComments" class="form-label"></label>
+                <textarea asp-for="AdditionalComments" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Trainer rating</legend>
+        <p class="form-guidance">5 is excellent and 1 is poor.</p>
+        <div class="trainer-ratings">
+            <div><span>Knowledge of the subject matter</span>@for (var score = 5; score >= 1; score--) { <label>@Html.RadioButtonFor(m => m.TrainerKnowledge, score) @score</label> }</div>
+            <div><span>Ability to explain and illustrate concepts</span>@for (var score = 5; score >= 1; score--) { <label>@Html.RadioButtonFor(m => m.TrainerExplanation, score) @score</label> }</div>
+            <div><span>Ability to answer questions completely</span>@for (var score = 5; score >= 1; score--) { <label>@Html.RadioButtonFor(m => m.TrainerAnswers, score) @score</label> }</div>
+        </div>
+        <div class="row g-3 mt-1">
+            <div class="col-md-6"><label asp-for="VenueComments" class="form-label"></label><textarea asp-for="VenueComments" class="form-control" rows="3"></textarea></div>
+            <div class="col-md-6"><label asp-for="MealsComments" class="form-label"></label><textarea asp-for="MealsComments" class="form-control" rows="3"></textarea></div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Supporting records</legend>
+        <div class="row g-3">
+            <div class="col-md-4 form-check-card"><input asp-for="OfficialResultsAttached" class="form-check-input" /><label asp-for="OfficialResultsAttached" class="form-check-label"></label></div>
+            <div class="col-md-4 form-check-card"><input asp-for="CertificateAttached" class="form-check-input" /><label asp-for="CertificateAttached" class="form-check-label"></label></div>
+            <div class="col-md-4 form-check-card"><input asp-for="AttendanceRegisterAttached" class="form-check-input" /><label asp-for="AttendanceRegisterAttached" class="form-check-label"></label></div>
+        </div>
+    </fieldset>
+
+    <div class="form-actions">
+        <a class="btn btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.InductionCaseId">Cancel</a>
+        <button class="btn btn-primary" type="submit">Submit evaluation</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

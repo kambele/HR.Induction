@@ -1,0 +1,87 @@
+@model InductionProgrammeEditorViewModel
+@{
+    var isEdit = Model.Id != 0;
+    ViewData["Title"] = isEdit ? "Edit induction programme" : "Create induction programme";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="@(isEdit ? "Details" : "Index")" asp-route-id="@(isEdit ? Model.Id : null)">&larr; Back</a>
+    <p class="eyebrow">HR business partner</p><h1>@(isEdit ? "Edit induction programme" : "Create induction programme")</h1>
+    <p class="lead-copy">Specify the programme date and arrange each divisional presentation into a clear, non-overlapping time slot.</p>
+</section>
+
+<form asp-action="@(isEdit ? "Edit" : "Create")" method="post" class="content-card programme-editor-card">
+    <input asp-for="Id" type="hidden" />
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7"><label asp-for="Title" class="form-label"></label><input asp-for="Title" class="form-control" /><span asp-validation-for="Title" class="text-danger"></span></div>
+        <div class="col-lg-3"><label asp-for="ProgrammeDate" class="form-label"></label><input asp-for="ProgrammeDate" class="form-control" /><span asp-validation-for="ProgrammeDate" class="text-danger"></span></div>
+        <div class="col-lg-2"><label asp-for="Status" class="form-label"></label><select asp-for="Status" asp-items="Html.GetEnumSelectList<InductionProgrammeStatus>()" class="form-select"></select></div>
+        <div class="col-lg-6"><label asp-for="Venue" class="form-label"></label><input asp-for="Venue" class="form-control" placeholder="Boardroom or venue" /></div>
+        <div class="col-lg-6"><label asp-for="Notes" class="form-label"></label><input asp-for="Notes" class="form-control" placeholder="Optional programme notes" /></div>
+    </div>
+
+    <div class="card-heading"><div><h2>Divisional presentation schedule</h2><p>One presentation per division. Time slots cannot overlap.</p></div>@if (!Model.ScheduleLocked){<button class="btn btn-sm btn-outline-primary" id="addProgrammeSession" type="button">Add presentation</button>}</div>
+    @if (Model.ScheduleLocked)
+    {
+        <div class="alert alert-info">The presentation schedule is locked because employees have submitted ratings. Programme details and status can still be updated.</div>
+        <div class="table-responsive"><table class="table programme-schedule-table"><thead><tr><th>Time</th><th>Division</th><th>Presenter</th></tr></thead><tbody>@foreach(var session in Model.Sessions.OrderBy(x => x.StartTime)){<tr><td>@session.StartTime?.ToString("hh\\:mm")-@session.EndTime?.ToString("hh\\:mm")</td><td>@session.Division</td><td>@session.PresenterName</td></tr>}</tbody></table></div>
+    }
+    else
+    {
+        <div id="programmeSessions" class="programme-session-editor">
+            @for (var i = 0; i < Model.Sessions.Count; i++)
+            {
+                <div class="programme-session-row">
+                    <input asp-for="Sessions[i].Id" type="hidden" />
+                    <div><label asp-for="Sessions[i].Division" class="form-label"></label><select asp-for="Sessions[i].Division" asp-items="Model.DivisionOptions" class="form-select"><option value="">Select division</option></select><span asp-validation-for="Sessions[i].Division" class="text-danger"></span></div>
+                    <div><label asp-for="Sessions[i].PresenterName" class="form-label"></label><input asp-for="Sessions[i].PresenterName" class="form-control" /><span asp-validation-for="Sessions[i].PresenterName" class="text-danger"></span></div>
+                    <div><label asp-for="Sessions[i].StartTime" class="form-label"></label><input asp-for="Sessions[i].StartTime" class="form-control" type="time" /><span asp-validation-for="Sessions[i].StartTime" class="text-danger"></span></div>
+                    <div><label asp-for="Sessions[i].EndTime" class="form-label"></label><input asp-for="Sessions[i].EndTime" class="form-control" type="time" /><span asp-validation-for="Sessions[i].EndTime" class="text-danger"></span></div>
+                    <button class="btn btn-outline-danger remove-programme-session" type="button" aria-label="Remove presentation">Remove</button>
+                </div>
+            }
+        </div>
+        <template id="programmeSessionTemplate">
+            <div class="programme-session-row">
+                <input type="hidden" name="Sessions[__index__].Id" value="0" />
+                <div><label class="form-label" for="Sessions___index____Division">Division</label><select class="form-select" id="Sessions___index____Division" name="Sessions[__index__].Division" required><option value="">Select division</option>@foreach (var division in Model.DivisionOptions){<option value="@division.Value">@division.Text</option>}</select></div>
+                <div><label class="form-label" for="Sessions___index____PresenterName">Presenter</label><input class="form-control" id="Sessions___index____PresenterName" name="Sessions[__index__].PresenterName" required maxlength="150" /></div>
+                <div><label class="form-label" for="Sessions___index____StartTime">Start time</label><input class="form-control" id="Sessions___index____StartTime" name="Sessions[__index__].StartTime" type="time" required /></div>
+                <div><label class="form-label" for="Sessions___index____EndTime">End time</label><input class="form-control" id="Sessions___index____EndTime" name="Sessions[__index__].EndTime" type="time" required /></div>
+                <button class="btn btn-outline-danger remove-programme-session" type="button">Remove</button>
+            </div>
+        </template>
+    }
+    <div class="form-actions mt-4"><a class="btn btn-outline-secondary" asp-action="@(isEdit ? "Details" : "Index")" asp-route-id="@(isEdit ? Model.Id : null)">Cancel</a><button class="btn btn-primary" type="submit">@(isEdit ? "Save programme" : "Create programme")</button></div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    @if (!Model.ScheduleLocked)
+    {
+        <script>
+            (() => {
+                const list = document.getElementById('programmeSessions');
+                const template = document.getElementById('programmeSessionTemplate');
+                const add = document.getElementById('addProgrammeSession');
+                const renumber = () => [...list.querySelectorAll('.programme-session-row')].forEach((row, index) => {
+                    row.querySelectorAll('[name]').forEach(el => el.name = el.name.replace(/Sessions\[\d+\]/, `Sessions[${index}]`));
+                    row.querySelectorAll('[id]').forEach(el => el.id = el.id.replace(/Sessions_\d+__/, `Sessions_${index}__`));
+                    row.querySelectorAll('label[for]').forEach(el => el.htmlFor = el.htmlFor.replace(/Sessions_\d+__/, `Sessions_${index}__`));
+                });
+                const bind = root => root.querySelector('.remove-programme-session').addEventListener('click', () => {
+                    if (list.children.length === 1) return;
+                    root.remove(); renumber();
+                });
+                [...list.children].forEach(bind);
+                add.addEventListener('click', () => {
+                    const index = list.children.length;
+                    const holder = document.createElement('div');
+                    holder.innerHTML = template.innerHTML.replaceAll('__index__', index).trim();
+                    const row = holder.firstElementChild; list.append(row); bind(row); renumber();
+                });
+            })();
+        </script>
+    }
+}

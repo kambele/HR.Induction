@@ -1,0 +1,55 @@
+@model TrainingEvaluation
+@{
+    ViewData["Title"] = Model.CourseTitle;
+    var agreementAverage = new[]
+    {
+        Model.ObjectivesClearlyDefined, Model.ParticipationEncouraged, Model.ContentOrganized,
+        Model.MaterialsHelpful, Model.UsefulInWork, Model.ObjectivesMet, Model.TimeSufficient,
+        Model.FacilitiesAdequate
+    }.Average();
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.InductionCaseId">&larr; Back to induction</a>
+    <p class="eyebrow">Training evaluation</p>
+    <h1>@Model.CourseTitle</h1>
+    <p class="lead-copy">@Model.CourseProvider · @Model.CourseDate.ToString("dd MMMM yyyy")</p>
+</section>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="content-card score-card">
+            <span>Overall impression</span>
+            <strong>@Model.OverallImpression / 4</strong>
+            <small>Agreement average @agreementAverage.ToString("0.0") / 4</small>
+        </div>
+        <div class="content-card mt-4">
+            <h3>Trainer ratings</h3>
+            <dl class="feedback-summary">
+                <div><dt>Knowledge</dt><dd>@Model.TrainerKnowledge / 5</dd></div>
+                <div><dt>Explanation</dt><dd>@Model.TrainerExplanation / 5</dd></div>
+                <div><dt>Answers</dt><dd>@Model.TrainerAnswers / 5</dd></div>
+            </dl>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="content-card">
+            <h2>Participant feedback</h2>
+            <dl class="evaluation-details">
+                <div><dt>Areas of disagreement and proposed improvements</dt><dd>@(Model.DisagreementImprovements ?? "None")</dd></div>
+                <div><dt>Liked most</dt><dd>@(Model.LikedMost ?? "No response")</dd></div>
+                <div><dt>Could be improved</dt><dd>@(Model.CouldImprove ?? "No response")</dd></div>
+                <div><dt>Additional comments</dt><dd>@(Model.AdditionalComments ?? "None")</dd></div>
+                <div><dt>Venue</dt><dd>@(Model.VenueComments ?? "No response")</dd></div>
+                <div><dt>Meals and refreshments</dt><dd>@(Model.MealsComments ?? "No response")</dd></div>
+            </dl>
+            <h3 class="mt-4">Supporting records</h3>
+            <div class="supporting-records">
+                <span class="@(Model.OfficialResultsAttached ? "present" : null)">Official results</span>
+                <span class="@(Model.CertificateAttached ? "present" : null)">Certificate</span>
+                <span class="@(Model.AttendanceRegisterAttached ? "present" : null)">Attendance register</span>
+            </div>
+            <p class="audit-line mt-4">Submitted by @Model.SubmittedBy on @Model.SubmittedAtUtc.ToString("dd MMM yyyy HH:mm") UTC</p>
+        </div>
+    </div>
+</div>

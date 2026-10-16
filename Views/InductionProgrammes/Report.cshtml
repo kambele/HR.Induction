@@ -1,0 +1,26 @@
+@using System.Text.Json
+@model InductionProgrammeReportViewModel
+@{
+    ViewData["Title"] = "Programme report";
+    var divisionData = JsonSerializer.Serialize(Model.DivisionRatings.Select(x => new { division = x.Division, presenter = x.Presenter, average = x.Average, responses = x.Responses }));
+    var overallData = JsonSerializer.Serialize(Model.OverallRatingDistribution.Select(x => new { rating = x.Rating, count = x.Count }));
+    var timeData = JsonSerializer.Serialize(Model.TimeAllocationDistribution.Select(x => new { label = x.Label, count = x.Count }));
+}
+@section Styles { <link rel="stylesheet" href="~/lib/c3/c3.min.css" /><link rel="stylesheet" href="~/css/limitless-report.css" asp-append-version="true" /> }
+
+<section class="limitless-page-header">
+    <div><a class="back-link" asp-action="Details" asp-route-id="@Model.Programme.Id">&larr; Back to programme</a><p class="eyebrow">Programme analytics</p><h1>@Model.Programme.Title</h1><p>@Model.Programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy") · @(Model.Programme.Venue ?? "Venue not specified")</p></div>
+    <a class="btn btn-primary" asp-action="DownloadReport" asp-route-id="@Model.Programme.Id">Download PDF report</a>
+</section>
+
+<section class="limitless-stat-grid"><article><span>Assigned employees</span><strong>@Model.ParticipantCount</strong><small>Programme participants</small></article><article><span>Feedback responses</span><strong>@Model.ResponseCount</strong><small>@Model.ResponseRate% response rate</small></article><article><span>Programme rating</span><strong>@Model.AverageOverallRating.ToString("0.00")</strong><small>Average out of 5</small></article><article><span>Presentation rating</span><strong>@Model.AveragePresentationRating.ToString("0.00")</strong><small>Average out of 5</small></article></section>
+
+<div class="row g-4 mb-4"><section class="col-xl-8"><div class="limitless-card"><header><div><h2>Divisional presentation ratings</h2><p>Average employee rating by division and presenter</p></div><span class="chart-library-badge">ECharts</span></header><div id="divisionRatingsChart" class="limitless-chart"></div></div></section><section class="col-xl-4"><div class="limitless-card"><header><div><h2>Overall rating</h2><p>Programme score distribution</p></div><span class="chart-library-badge">C3</span></header><div id="overallRatingChart" class="limitless-chart"></div></div></section></div>
+
+<div class="row g-4"><section class="col-xl-5"><div class="limitless-card"><header><div><h2>Time allocation</h2><p>Employee view of presentation duration</p></div><span class="chart-library-badge">D3</span></header><div id="timeAllocationChart" class="limitless-chart limitless-chart-compact"></div></div></section><section class="col-xl-7"><div class="limitless-card"><header><div><h2>Programme schedule</h2><p>Published divisional sessions</p></div></header><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Time</th><th>Division</th><th>Presenter</th><th>Average</th></tr></thead><tbody>@foreach(var session in Model.DivisionRatings){var source=Model.Programme.Sessions.First(x=>x.Division==session.Division);<tr><td>@source.StartTime.ToString("hh\\:mm")-@source.EndTime.ToString("hh\\:mm")</td><td>@session.Division</td><td>@session.Presenter</td><td><strong>@(session.Responses == 0 ? "No ratings" : $"{session.Average:0.00}/5")</strong></td></tr>}</tbody></table></div></div></section></div>
+
+<script id="divisionRatingsData" type="application/json">@Html.Raw(divisionData)</script><script id="overallRatingData" type="application/json">@Html.Raw(overallData)</script><script id="timeAllocationData" type="application/json">@Html.Raw(timeData)</script>
+
+@section Scripts {
+    <script src="~/lib/d3/d3.min.js"></script><script src="~/lib/c3/c3.min.js"></script><script src="~/lib/echarts/echarts.min.js"></script><script src="~/js/programme-report.js" asp-append-version="true"></script>
+}

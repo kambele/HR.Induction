@@ -1,0 +1,50 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Administration";
+}
+
+<section class="page-heading d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3">
+    <div>
+        <p class="eyebrow">HR business partner workspace</p>
+        <h1>Administration</h1>
+        <p class="lead-copy">Maintain the values, checklist activities, workflow controls and communication wording used across employee inductions.</p>
+    </div>
+    <a class="btn btn-primary" asp-controller="Inductions" asp-action="Create">Create new induction</a>
+</section>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-card"><span class="metric-label">Active activities</span><strong>@Model.ActiveChecklistItems</strong><span class="metric-note">Used for new induction plans</span></div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-card metric-gold"><span class="metric-label">Archived activities</span><strong>@Model.InactiveChecklistItems</strong><span class="metric-note">Retained for audit history</span></div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-card metric-success"><span class="metric-label">Active master values</span><strong>@Model.ActiveMasterDataItems</strong><span class="metric-note">Available in forms and templates</span></div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="metric-card"><span class="metric-label">Last configuration</span><strong class="admin-date">@(Model.LastConfigurationUpdateUtc?.ToString("dd MMM yyyy") ?? "Not recorded")</strong><span class="metric-note">UTC audit timestamp retained</span></div>
+    </div>
+</div>
+
+<div class="admin-workspace-grid">
+    <a class="admin-workspace-card" asp-action="MasterData">
+        <span class="admin-card-number">01</span>
+        <div><p class="eyebrow">Reference data</p><h2>Master data</h2><p>Manage departments, divisions, responsible roles and checklist sections.</p></div>
+        <span class="admin-card-arrow">&rarr;</span>
+    </a>
+    <a class="admin-workspace-card" asp-action="ChecklistTemplates">
+        <span class="admin-card-number">02</span>
+        <div><p class="eyebrow">Plan design</p><h2>Checklist activities</h2><p>Configure wording, phase, owner, due date, requirement and display order.</p></div>
+        <span class="admin-card-arrow">&rarr;</span>
+    </a>
+    <a class="admin-workspace-card" asp-action="WorkflowSettings">
+        <span class="admin-card-number">03</span>
+        <div><p class="eyebrow">Process controls</p><h2>Workflow and wording</h2><p>Control sign-off rules, checklist locking, emails and acknowledgement text.</p></div>
+        <span class="admin-card-arrow">&rarr;</span>
+    </a>
+</div>
+
+<div class="alert alert-info mt-4 mb-0">
+    Configuration changes apply to future activity generation or future workflow actions. Existing employee checklist wording remains unchanged to preserve the historical record.
+</div>

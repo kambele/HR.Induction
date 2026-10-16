@@ -1,0 +1,132 @@
+@model CreateInductionViewModel
+@{
+    ViewData["Title"] = "Create induction";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="Index">&larr; Back to inductions</a>
+    <p class="eyebrow">New employee</p>
+    <h1>Create induction plan</h1>
+    <p class="lead-copy">The application will generate the pre-start, workplace and divisional tasks automatically.</p>
+</section>
+
+<form asp-action="Create" method="post" class="content-card form-card">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <fieldset>
+        <legend>Employee details</legend>
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label asp-for="EmployeeTitle" class="form-label"></label>
+                <select asp-for="EmployeeTitle" asp-items="Model.EmployeeTitleOptions" class="form-select">
+                    <option value="">Select title</option>
+                </select>
+                <span asp-validation-for="EmployeeTitle" class="text-danger"></span>
+            </div>
+            <div class="col-md-5">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control" autocomplete="given-name" />
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="col-md-5">
+                <label asp-for="LastName" class="form-label"></label>
+                <input asp-for="LastName" class="form-control" autocomplete="family-name" />
+                <span asp-validation-for="LastName" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="EmployeeNumber" class="form-label"></label>
+                <input asp-for="EmployeeNumber" class="form-control" />
+                <span asp-validation-for="EmployeeNumber" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Gender" class="form-label"></label>
+                <select asp-for="Gender" asp-items="Model.GenderOptions" class="form-select">
+                    <option value="">Select gender</option>
+                </select>
+                <span asp-validation-for="Gender" class="text-danger"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Position" class="form-label"></label>
+                <input asp-for="Position" class="form-control" maxlength="150" placeholder="Enter position" />
+                <div class="form-text">Enter the employee's position as short text.</div>
+                <span asp-validation-for="Position" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="EmployeeUsername" class="form-label"></label>
+                <input asp-for="EmployeeUsername" class="form-control" placeholder="DOMAIN\username" />
+                <div class="form-text">Only this specific AD account will be allowed to complete the employee sign-off.</div>
+                <span asp-validation-for="EmployeeUsername" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="EmployeeEmail" class="form-label"></label>
+                <input asp-for="EmployeeEmail" class="form-control" autocomplete="email" placeholder="employee@namfisa.com.na" />
+                <div class="form-text">The induction invitation will be sent directly to this address.</div>
+                <span asp-validation-for="EmployeeEmail" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="AppointmentDate" class="form-label"></label>
+                <input asp-for="AppointmentDate" class="form-control" />
+                <span asp-validation-for="AppointmentDate" class="text-danger"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="InductionProgrammeId" class="form-label"></label>
+                <select asp-for="InductionProgrammeId" asp-items="Model.ProgrammeOptions" class="form-select">
+                    <option value="">Assign later</option>
+                </select>
+                <div class="form-text">Assigning a programme gives the employee the divisional schedule and programme feedback form.</div>
+                <span asp-validation-for="InductionProgrammeId" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Department" class="form-label"></label>
+                <select asp-for="Department" asp-items="Model.DepartmentOptions" class="form-select">
+                    <option value="">Select department</option>
+                </select>
+                <span asp-validation-for="Department" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Division" class="form-label"></label>
+                <select asp-for="Division" asp-items="Model.DivisionOptions" class="form-select">
+                    <option value="">Select division</option>
+                </select>
+                <span asp-validation-for="Division" class="text-danger"></span>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>Responsible people</legend>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="LineManagerName" class="form-label"></label>
+                <input asp-for="LineManagerName" class="form-control" />
+                <span asp-validation-for="LineManagerName" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="LineManagerUsername" class="form-label"></label>
+                <input asp-for="LineManagerUsername" class="form-control" placeholder="DOMAIN\username" />
+                <div class="form-text">Only this AD account can complete the line-manager sign-off.</div>
+                <span asp-validation-for="LineManagerUsername" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="HrBusinessPartnerName" class="form-label"></label>
+                <input asp-for="HrBusinessPartnerName" class="form-control" />
+                <span asp-validation-for="HrBusinessPartnerName" class="text-danger"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="HrBusinessPartnerUsername" class="form-label"></label>
+                <input asp-for="HrBusinessPartnerUsername" class="form-control" placeholder="DOMAIN\username" />
+                <div class="form-text">Only this AD account can complete the HRBP sign-off.</div>
+                <span asp-validation-for="HrBusinessPartnerUsername" class="text-danger"></span>
+            </div>
+        </div>
+    </fieldset>
+
+    <div class="form-actions">
+        <a class="btn btn-outline-secondary" asp-action="Index">Cancel</a>
+        <button class="btn btn-primary" type="submit">Create induction plan</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

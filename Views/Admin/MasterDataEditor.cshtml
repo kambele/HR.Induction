@@ -1,0 +1,36 @@
+@model MasterDataEditViewModel
+@{
+    var editing = Model.Id.HasValue;
+    ViewData["Title"] = editing ? "Edit master data" : "Add master data";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="MasterData" asp-route-category="@Model.Category">&larr; Back to master data</a>
+    <p class="eyebrow">Administration</p>
+    <h1>@(editing ? "Edit master data" : "Add master data")</h1>
+    <p class="lead-copy">Archive values instead of deleting them so existing employee records remain understandable.</p>
+</section>
+
+<form asp-action="@(editing ? "EditMasterData" : "CreateMasterData")" method="post" class="content-card form-card admin-editor-card">
+    @if (editing) { <input asp-for="Id" type="hidden" /> }
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <label asp-for="Category" class="form-label"></label>
+            <select asp-for="Category" class="form-select">
+                @foreach (var category in Enum.GetValues<MasterDataCategory>().Where(x => x != MasterDataCategory.Position))
+                {
+                    <option value="@category">@DisplayText.For(category)</option>
+                }
+            </select>
+            <span asp-validation-for="Category" class="text-danger"></span>
+        </div>
+        <div class="col-md-6"><label asp-for="Name" class="form-label"></label><input asp-for="Name" class="form-control" /><span asp-validation-for="Name" class="text-danger"></span></div>
+        <div class="col-12"><label asp-for="Description" class="form-label"></label><textarea asp-for="Description" class="form-control" rows="3"></textarea><span asp-validation-for="Description" class="text-danger"></span></div>
+        <div class="col-md-4"><label asp-for="SortOrder" class="form-label"></label><input asp-for="SortOrder" class="form-control" /><span asp-validation-for="SortOrder" class="text-danger"></span></div>
+        <div class="col-md-8 d-flex align-items-end"><div class="form-check form-switch admin-switch"><input asp-for="IsActive" class="form-check-input" /><label asp-for="IsActive" class="form-check-label"></label></div></div>
+    </div>
+    <div class="form-actions"><a class="btn btn-outline-secondary" asp-action="MasterData" asp-route-category="@Model.Category">Cancel</a><button class="btn btn-primary" type="submit">@(editing ? "Save changes" : "Create item")</button></div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,224 @@
+@{
+    ViewData["Title"] = "Import induction plans";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="Index">&larr; Back to inductions</a>
+    <p class="eyebrow">Bulk planning</p>
+    <h1>Import induction plans</h1>
+    <p class="lead-copy">Download the controlled Excel template, complete one employee per row, then upload it for validation and import.</p>
+</section>
+
+<div class="row g-4 align-items-stretch import-workspace">
+    <div class="col-lg-5">
+        <section class="content-card h-100 import-step-card">
+            <span class="import-step-number">1</span>
+            <div>
+                <p class="eyebrow">Prepare the workbook</p>
+                <h2>Download the current template</h2>
+                <p>The drop-down values are refreshed from Administration each time you download. Position remains a short-text field.</p>
+                <a class="btn btn-outline-primary" asp-action="DownloadImportTemplate">Download Excel template</a>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-7">
+        <section class="content-card h-100 import-step-card">
+            <span class="import-step-number">2</span>
+            <div class="w-100">
+                <p class="eyebrow">Validate and import</p>
+                <h2>Upload completed template</h2>
+                <p>Up to 500 rows can be processed. Existing Employee AD IDs or Employee Numbers are skipped and are never imported twice.</p>
+                <form id="importForm" asp-action="UploadImport" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <label class="form-label" for="file">Excel workbook</label>
+                    <input class="form-control" id="file" name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+                    <div class="form-text">Use the unchanged .xlsx template. Maximum file size: 10 MB.</div>
+                    <button id="importButton" class="btn btn-primary mt-3" type="submit">Upload and import</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="content-card mt-4 import-rules">
+    <div class="card-heading">
+        <div><h2>Import checks</h2><p>Each row is checked before a plan is created.</p></div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-4"><strong>Duplicate protection</strong><span>Matches on Employee AD ID or Employee Number are skipped.</span></div>
+        <div class="col-md-4"><strong>Controlled values</strong><span>Title, gender, department and division must be active in Administration.</span></div>
+        <div class="col-md-4"><strong>Identity and delivery</strong><span>AD IDs must use DOMAIN\username and every employee must have a valid email address.</span></div>
+    </div>
+</section>
+
+<div class="modal fade" id="importProgressModal" tabindex="-1" aria-labelledby="importProgressTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content import-modal">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow mb-1">Induction plan import</p>
+                    <h2 class="modal-title fs-4" id="importProgressTitle">Uploading workbook</h2>
+                </div>
+                <button id="importCloseIcon" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" disabled></button>
+            </div>
+            <div class="modal-body">
+                <p id="importProgressMessage" class="mb-2">Starting upload...</p>
+                <div class="progress import-progress" role="progressbar" aria-label="Workbook upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <div id="importProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%">0%</div>
+                </div>
+                <div id="importSummary" class="import-summary mt-4" hidden></div>
+                <div id="importRows" class="table-responsive mt-3" hidden>
+                    <table class="table align-middle mb-0 import-results-table">
+                        <thead><tr><th>Row</th><th>Employee</th><th>Status</th><th>Result</th></tr></thead>
+                        <tbody id="importRowsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a id="viewInductionsButton" class="btn btn-outline-primary" asp-action="Index" hidden>View inductions</a>
+                <button id="importCloseButton" type="button" class="btn btn-secondary" data-bs-dismiss="modal" disabled>Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const form = document.getElementById('importForm');
+            const fileInput = document.getElementById('file');
+            const submitButton = document.getElementById('importButton');
+            const modalElement = document.getElementById('importProgressModal');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
+            const title = document.getElementById('importProgressTitle');
+            const message = document.getElementById('importProgressMessage');
+            const progress = modalElement.querySelector('.import-progress');
+            const progressBar = document.getElementById('importProgressBar');
+            const summary = document.getElementById('importSummary');
+            const rows = document.getElementById('importRows');
+            const rowsBody = document.getElementById('importRowsBody');
+            const closeButton = document.getElementById('importCloseButton');
+            const closeIcon = document.getElementById('importCloseIcon');
+            const viewButton = document.getElementById('viewInductionsButton');
+
+            const setProgress = value => {
+                const percent = Math.max(0, Math.min(100, Math.round(value)));
+                progress.setAttribute('aria-valuenow', percent.toString());
+                progressBar.style.width = `${percent}%`;
+                progressBar.textContent = `${percent}%`;
+            };
+
+            const resetModal = () => {
+                title.textContent = 'Uploading workbook';
+                message.textContent = 'Starting upload...';
+                setProgress(0);
+                progressBar.classList.add('progress-bar-striped', 'progress-bar-animated');
+                progressBar.classList.remove('bg-danger');
+                summary.hidden = true;
+                summary.replaceChildren();
+                rows.hidden = true;
+                rowsBody.replaceChildren();
+                closeButton.disabled = true;
+                closeIcon.disabled = true;
+                viewButton.hidden = true;
+            };
+
+            const finish = () => {
+                submitButton.disabled = false;
+                closeButton.disabled = false;
+                closeIcon.disabled = false;
+                progressBar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+            };
+
+            const addSummaryMetric = (label, value, className) => {
+                const card = document.createElement('div');
+                card.className = `import-summary-item ${className}`;
+                const number = document.createElement('strong');
+                number.textContent = value;
+                const text = document.createElement('span');
+                text.textContent = label;
+                card.append(number, text);
+                summary.append(card);
+            };
+
+            const renderResult = result => {
+                const processed = result && result.wasProcessed;
+                title.textContent = processed ? 'Import complete' : 'Import could not start';
+                message.textContent = result?.message || 'The workbook could not be imported.';
+
+                if (!processed) {
+                    progressBar.classList.add('bg-danger');
+                    setProgress(100);
+                    finish();
+                    return;
+                }
+
+                summary.hidden = false;
+                addSummaryMetric('Imported', result.importedCount ?? 0, 'is-imported');
+                addSummaryMetric('Duplicates skipped', result.duplicateCount ?? 0, 'is-duplicate');
+                addSummaryMetric('Failed', result.failedCount ?? 0, 'is-failed');
+
+                if (Array.isArray(result.rows) && result.rows.length > 0) {
+                    rows.hidden = false;
+                    result.rows.forEach(item => {
+                        const row = document.createElement('tr');
+                        const rowNumber = document.createElement('td');
+                        const employee = document.createElement('td');
+                        const status = document.createElement('td');
+                        const detail = document.createElement('td');
+                        const badge = document.createElement('span');
+                        rowNumber.textContent = item.rowNumber;
+                        employee.textContent = item.employee;
+                        badge.className = `import-status import-status-${String(item.status).toLowerCase()}`;
+                        badge.textContent = item.status;
+                        status.append(badge);
+                        detail.textContent = item.message;
+                        row.append(rowNumber, employee, status, detail);
+                        rowsBody.append(row);
+                    });
+                }
+
+                setProgress(100);
+                viewButton.hidden = (result.importedCount ?? 0) === 0;
+                finish();
+            };
+
+            form.addEventListener('submit', event => {
+                event.preventDefault();
+                if (!fileInput.files.length || !form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                resetModal();
+                submitButton.disabled = true;
+                modal.show();
+
+                const request = new XMLHttpRequest();
+                request.open('POST', form.action);
+                request.responseType = 'json';
+                request.upload.addEventListener('progress', uploadEvent => {
+                    if (uploadEvent.lengthComputable) {
+                        setProgress((uploadEvent.loaded / uploadEvent.total) * 100);
+                        message.textContent = `Uploading ${fileInput.files[0].name}...`;
+                    }
+                });
+                request.upload.addEventListener('load', () => {
+                    setProgress(100);
+                    message.textContent = 'Upload complete. Validating rows and creating induction plans...';
+                });
+                request.addEventListener('load', () => {
+                    let result = request.response;
+                    if (!result && request.responseText) {
+                        try { result = JSON.parse(request.responseText); } catch { result = null; }
+                    }
+                    renderResult(result);
+                });
+                request.addEventListener('error', () => {
+                    renderResult({ wasProcessed: false, message: 'The upload was interrupted. Check the connection and try again.' });
+                });
+                request.send(new FormData(form));
+            });
+        })();
+    </script>
+}

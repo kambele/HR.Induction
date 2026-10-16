@@ -1,0 +1,53 @@
+@model WorkflowSettingsViewModel
+@{
+    ViewData["Title"] = "Workflow and wording";
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="Index">&larr; Back to administration</a>
+    <p class="eyebrow">Administration</p><h1>Workflow and wording</h1>
+    <p class="lead-copy">Control how an induction progresses and maintain the reusable messages presented to employees and responsible staff.</p>
+</section>
+
+<form asp-action="WorkflowSettings" method="post" class="admin-settings-form">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+    <section class="content-card mb-4">
+        <div class="card-heading"><div><h2>Workflow controls</h2><p>Changes take effect on the next workflow action for all open inductions.</p></div></div>
+        <div class="workflow-switch-grid">
+            <label class="workflow-switch"><input asp-for="RequireMandatoryTasksBeforeSignOff" class="form-check-input" /><span><strong>@Html.DisplayNameFor(x => x.RequireMandatoryTasksBeforeSignOff)</strong><small>Prevents sign-off while required activities remain open.</small></span></label>
+            <label class="workflow-switch"><input asp-for="RequireEmployeeFeedbackBeforeSignOff" class="form-check-input" /><span><strong>@Html.DisplayNameFor(x => x.RequireEmployeeFeedbackBeforeSignOff)</strong><small>Ensures the employee feedback form is recorded first.</small></span></label>
+            <label class="workflow-switch"><input asp-for="EnforceSequentialSignOff" class="form-check-input" /><span><strong>@Html.DisplayNameFor(x => x.EnforceSequentialSignOff)</strong><small>Keeps sign-off in the agreed employee-to-HR order.</small></span></label>
+            <label class="workflow-switch"><input asp-for="LockChecklistWhenSignOffStarts" class="form-check-input" /><span><strong>@Html.DisplayNameFor(x => x.LockChecklistWhenSignOffStarts)</strong><small>Protects recorded checklist results after the first signature.</small></span></label>
+        </div>
+    </section>
+
+    <section class="content-card mb-4">
+        <div class="card-heading"><div><h2>Email invitations</h2><p>Invitations are delivered directly by the application through the configured SMTP server.</p></div></div>
+        <div class="smtp-status-panel @(Model.SmtpConfigured ? "is-ready" : "is-missing") mb-4">
+            <span class="smtp-status-dot" aria-hidden="true"></span>
+            <div>
+                <strong>@(Model.SmtpConfigured ? "SMTP delivery ready" : "SMTP configuration required")</strong>
+                <span>@Model.SmtpConfigurationSummary</span>
+                <small>Server connection details and credentials are maintained securely in the application server configuration.</small>
+            </div>
+        </div>
+        <div class="email-token-guide mb-3">
+            <span>Available fields</span>
+            <code>{EmployeeName}</code><code>{FirstName}</code><code>{Position}</code><code>{Department}</code><code>{Division}</code><code>{AppointmentDate}</code><code>{InductionUrl}</code>
+        </div>
+        <div class="mb-3"><label asp-for="EmailSubjectTemplate" class="form-label"></label><input asp-for="EmailSubjectTemplate" class="form-control" /><span asp-validation-for="EmailSubjectTemplate" class="text-danger"></span></div>
+        <div><label asp-for="EmailBodyTemplate" class="form-label"></label><textarea asp-for="EmailBodyTemplate" class="form-control admin-message-editor" rows="10"></textarea><span asp-validation-for="EmailBodyTemplate" class="text-danger"></span></div>
+    </section>
+
+    <section class="content-card mb-4">
+        <div class="card-heading"><div><h2>Sign-off acknowledgements</h2><p>These statements are stored with each signature as part of the audit record.</p></div></div>
+        <div class="row g-4">
+            <div class="col-12"><label asp-for="EmployeeAcknowledgement" class="form-label"></label><textarea asp-for="EmployeeAcknowledgement" class="form-control" rows="3"></textarea><span asp-validation-for="EmployeeAcknowledgement" class="text-danger"></span></div>
+            <div class="col-12"><label asp-for="LineManagerAcknowledgement" class="form-label"></label><textarea asp-for="LineManagerAcknowledgement" class="form-control" rows="3"></textarea><span asp-validation-for="LineManagerAcknowledgement" class="text-danger"></span></div>
+            <div class="col-12"><label asp-for="HrBusinessPartnerAcknowledgement" class="form-label"></label><textarea asp-for="HrBusinessPartnerAcknowledgement" class="form-control" rows="3"></textarea><span asp-validation-for="HrBusinessPartnerAcknowledgement" class="text-danger"></span></div>
+        </div>
+    </section>
+    <div class="form-actions admin-sticky-actions"><a class="btn btn-outline-secondary" asp-action="Index">Cancel</a><button class="btn btn-primary" type="submit">Save configuration</button></div>
+</form>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
