@@ -495,3 +495,5 @@ D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\refint\Namfisa.Induct
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\Namfisa.Induction.pdb
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\Namfisa.Induction.genruntimeconfig.cache
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\ref\Namfisa.Induction.dll
+D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\dlgfvcjd3k-{0}-l0u4sg0igs-l0u4sg0igs.gz
+D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\36fhv0pbsy-{0}-up8klt7cvo-up8klt7cvo.gz
