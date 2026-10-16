@@ -1,80 +1,117 @@
 @model DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard";
+    var chartPayload = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        monthlyTrend = Model.MonthlyTrend.Select(x => new { month = x.Month, planned = x.Planned, completed = x.Completed }),
+        statusDistribution = Model.StatusDistribution.Select(x => new { label = x.Label, value = x.Value }),
+        attendanceDistribution = Model.AttendanceDistribution.Select(x => new { label = x.Label, value = x.Value })
+    });
 }
 
 <section class="page-heading d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3">
     <div>
-        <p class="eyebrow">Employee Services</p>
+        <p class="eyebrow">Overview and analytics</p>
         <h1>Induction dashboard</h1>
-        <p class="lead-copy">Plan, track and complete every employee induction from one secure workspace.</p>
+        <p class="lead-copy">Monitor induction delivery, attendance, completion and employee feedback from one workspace.</p>
     </div>
     @if (Model.IsHr)
     {
-        <a class="btn btn-primary btn-lg" asp-controller="Inductions" asp-action="Create">Create induction</a>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary" asp-controller="InductionProgrammes" asp-action="Create">Plan programme</a>
+            <a class="btn btn-primary" asp-controller="Inductions" asp-action="Create">Create induction</a>
+        </div>
     }
 </section>
 
 <section class="row g-3 mb-4" aria-label="Induction summary">
-    <div class="col-6 col-xl-3">
-        <div class="metric-card">
-            <span class="metric-label">Active inductions</span>
-            <strong>@Model.ActiveInductions</strong>
-            <span class="metric-note">Currently underway</span>
+    <div class="col-sm-6 col-xl-3">
+        <div class="dashboard-metric">
+            <span class="dashboard-metric-icon">◎</span>
+            <div class="dashboard-metric-copy"><span>Active inductions</span><strong>@Model.ActiveInductions</strong><small>@Model.TotalInductions total records</small></div>
         </div>
     </div>
-    <div class="col-6 col-xl-3">
-        <div class="metric-card metric-warning">
-            <span class="metric-label">Overdue tasks</span>
-            <strong>@Model.OverdueTasks</strong>
-            <span class="metric-note">Require attention</span>
+    <div class="col-sm-6 col-xl-3">
+        <div class="dashboard-metric metric-orange">
+            <span class="dashboard-metric-icon">!</span>
+            <div class="dashboard-metric-copy"><span>Overdue tasks</span><strong>@Model.OverdueTasks</strong><small>Items requiring attention</small></div>
         </div>
     </div>
-    <div class="col-6 col-xl-3">
-        <div class="metric-card metric-gold">
-            <span class="metric-label">Awaiting sign-off</span>
-            <strong>@Model.AwaitingSignOff</strong>
-            <span class="metric-note">Ready for review</span>
+    <div class="col-sm-6 col-xl-3">
+        <div class="dashboard-metric metric-purple">
+            <span class="dashboard-metric-icon">✓</span>
+            <div class="dashboard-metric-copy"><span>Awaiting sign-off</span><strong>@Model.AwaitingSignOff</strong><small>Ready for authorised review</small></div>
         </div>
     </div>
-    <div class="col-6 col-xl-3">
-        <div class="metric-card metric-success">
-            <span class="metric-label">Completed this month</span>
-            <strong>@Model.CompletedThisMonth</strong>
-            <span class="metric-note">Fully signed</span>
+    <div class="col-sm-6 col-xl-3">
+        <div class="dashboard-metric metric-green">
+            <span class="dashboard-metric-icon">↗</span>
+            <div class="dashboard-metric-copy"><span>Completed this month</span><strong>@Model.CompletedThisMonth</strong><small>Fully signed inductions</small></div>
         </div>
     </div>
 </section>
 
-<div class="row g-4">
-    <section class="col-xl-7">
-        <div class="content-card h-100">
-            <div class="card-heading">
-                <div>
-                    <h2>Recent inductions</h2>
-                    <p>Latest employee plans and their current status.</p>
-                </div>
-                <a asp-controller="Inductions" asp-action="Index">View all</a>
+<div class="row g-3 mb-4">
+    <section class="col-xl-8">
+        <div class="dashboard-card h-100">
+            <header class="dashboard-card-header">
+                <div><h2>Six-month induction activity</h2><p>Appointments planned versus induction records completed</p></div>
+                <span class="chart-engine">ECharts</span>
+            </header>
+            <div id="inductionTrendChart" class="dashboard-chart" role="img" aria-label="Six-month induction activity chart"></div>
+            <div class="dashboard-quick-stats">
+                <div><span>Upcoming programmes</span><strong>@Model.ScheduledProgrammes</strong></div>
+                <div><span>Attendance rate</span><strong>@Model.AttendanceRate.ToString("0.0")%</strong></div>
+                <div><span>Feedback response</span><strong>@Model.FeedbackResponseRate.ToString("0.0")%</strong></div>
             </div>
+        </div>
+    </section>
+    <section class="col-xl-4">
+        <div class="dashboard-card h-100">
+            <header class="dashboard-card-header">
+                <div><h2>Induction status</h2><p>Current record distribution</p></div>
+                <span class="chart-engine">C3</span>
+            </header>
+            <div id="inductionStatusChart" class="dashboard-chart" role="img" aria-label="Induction status distribution chart"></div>
+        </div>
+    </section>
+</div>
+
+<div class="row g-3 mb-4">
+    <section class="col-xl-5">
+        <div class="dashboard-card h-100">
+            <header class="dashboard-card-header">
+                <div><h2>Programme attendance</h2><p>Present, absent and awaiting confirmation</p></div>
+                <span class="chart-engine">D3</span>
+            </header>
+            <div id="attendanceDistributionChart" class="dashboard-chart compact" role="img" aria-label="Programme attendance distribution chart"></div>
+            <div class="dashboard-quick-stats">
+                <div><span>Average rating</span><strong>@Model.AverageProgrammeRating.ToString("0.00")/5</strong></div>
+                <div><span>Responses</span><strong>@Model.FeedbackResponseRate.ToString("0.0")%</strong></div>
+                <div><span>Attendance</span><strong>@Model.AttendanceRate.ToString("0.0")%</strong></div>
+            </div>
+        </div>
+    </section>
+    <section class="col-xl-7">
+        <div class="dashboard-card h-100">
+            <header class="dashboard-card-header">
+                <div><h2>Recent inductions</h2><p>Latest employees and their current workflow status</p></div>
+                <a class="btn btn-sm btn-outline-secondary" asp-controller="Inductions" asp-action="Index">View all</a>
+            </header>
             @if (Model.RecentInductions.Count == 0)
             {
-                <div class="empty-state">No induction plans have been created yet.</div>
+                <div class="empty-state m-3">No induction plans have been created yet.</div>
             }
             else
             {
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
-                        <thead>
-                            <tr><th>Employee</th><th>Start date</th><th>Status</th><th></th></tr>
-                        </thead>
+                        <thead><tr><th>Employee</th><th>Start date</th><th>Status</th><th></th></tr></thead>
                         <tbody>
                         @foreach (var induction in Model.RecentInductions)
                         {
                             <tr>
-                                <td>
-                                    <strong>@induction.EmployeeName</strong>
-                                    <span class="subtext">@induction.Department</span>
-                                </td>
+                                <td><strong>@induction.EmployeeName</strong><span class="subtext">@induction.Department</span></td>
                                 <td>@induction.AppointmentDate.ToString("dd MMM yyyy")</td>
                                 <td><span class="status-badge status-@induction.Status.ToString().ToLowerInvariant()">@DisplayText.For(induction.Status)</span></td>
                                 <td class="text-end"><a class="btn btn-sm btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@induction.Id">Open</a></td>
@@ -86,36 +123,41 @@
             }
         </div>
     </section>
-
-    <section class="col-xl-5">
-        <div class="content-card h-100">
-            <div class="card-heading">
-                <div>
-                    <h2>@(Model.IsHr ? "Priority tasks" : "My tasks")</h2>
-                    <p>Open items ordered by due date.</p>
-                </div>
-            </div>
-            @if (Model.MyOpenTasks.Count == 0)
-            {
-                <div class="empty-state">There are no open tasks assigned to you.</div>
-            }
-            else
-            {
-                <div class="task-list">
-                    @foreach (var task in Model.MyOpenTasks)
-                    {
-                        var overdue = task.DueDate.Date < DateTime.Today;
-                        <a class="task-list-item" asp-controller="Inductions" asp-action="Details" asp-route-id="@task.InductionCaseId">
-                            <span class="task-check" aria-hidden="true"></span>
-                            <span class="flex-grow-1">
-                                <strong>@task.Title</strong>
-                                <span>@task.InductionCase.EmployeeName · @task.ResponsibleRole</span>
-                            </span>
-                            <span class="@(overdue ? "due-overdue" : "due-date")">@task.DueDate.ToString("dd MMM")</span>
-                        </a>
-                    }
-                </div>
-            }
-        </div>
-    </section>
 </div>
+
+<section class="dashboard-card">
+    <header class="dashboard-card-header"><div><h2>@(Model.IsHr ? "Priority tasks" : "My open tasks")</h2><p>Open checklist items ordered by due date</p></div></header>
+    <div class="dashboard-card-body">
+        @if (Model.MyOpenTasks.Count == 0)
+        {
+            <div class="empty-state">There are no open tasks assigned to you.</div>
+        }
+        else
+        {
+            <div class="task-list">
+                @foreach (var task in Model.MyOpenTasks)
+                {
+                    var overdue = task.DueDate.Date < DateTime.Today;
+                    <a class="task-list-item" asp-controller="Inductions" asp-action="Details" asp-route-id="@task.InductionCaseId">
+                        <span class="task-check" aria-hidden="true"></span>
+                        <span class="flex-grow-1"><strong>@task.Title</strong><span>@task.InductionCase.EmployeeName · @task.ResponsibleRole</span></span>
+                        <span class="@(overdue ? "due-overdue" : "due-date")">@task.DueDate.ToString("dd MMM")</span>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<script id="dashboardChartData" type="application/json">@Html.Raw(chartPayload)</script>
+
+@section Styles {
+    <link rel="stylesheet" href="~/lib/c3/c3.min.css" />
+}
+
+@section Scripts {
+    <script src="~/lib/d3/d3.min.js"></script>
+    <script src="~/lib/c3/c3.min.js"></script>
+    <script src="~/lib/echarts/echarts.min.js"></script>
+    <script src="~/js/dashboard-charts.js" asp-append-version="true"></script>
+}

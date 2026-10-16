@@ -494,4 +494,5 @@ D:\Development\Namfisa.Induction\obj\Release\net10.0-windows\compressed\qr2z7wm8
 D:\Development\Namfisa.Induction\obj\Release\net10.0-windows\compressed\99usx0z9kv-{0}-57kkehuecj-57kkehuecj.gz
 D:\Development\Namfisa.Induction\obj\Release\net10.0-windows\Namfisa.Induction.sourcelink.json
 D:\Development\Namfisa.Induction\obj\Release\net10.0-windows\compressed\pl717qwlf9-{0}-4x2iopezfs-4x2iopezfs.gz
-D:\Development\Namfisa.Induction\obj\Release\net10.0-windows\staticwebassets.upToDateCheck.txt
+D:\Development\Namfisa.Induction\obj\Release\net10.0-windows\compressed\dlgfvcjd3k-{0}-l0u4sg0igs-l0u4sg0igs.gz
+D:\Development\Namfisa.Induction\obj\Release\net10.0-windows\compressed\36fhv0pbsy-{0}-up8klt7cvo-up8klt7cvo.gz
