@@ -64,8 +64,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQWRtaW5cV29ya2Zsb3dTZXR0aW5ncy5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Development/Namfisa.Induction/Views/Attendance/Confirm.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcQXR0ZW5kYW5jZVxDb25maXJtLmNzaHRtbA==
+[D:/Development/Namfisa.Induction/Views/EmployeePortal/Attendance.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVQb3J0YWxcQXR0ZW5kYW5jZS5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Development/Namfisa.Induction/Views/EmployeePortal/Completed.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVQb3J0YWxcQ29tcGxldGVkLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Development/Namfisa.Induction/Views/EmployeePortal/Feedback.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVQb3J0YWxcRmVlZGJhY2suY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Development/Namfisa.Induction/Views/EmployeePortal/Unavailable.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcRW1wbG95ZWVQb3J0YWxcVW5hdmFpbGFibGUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Development/Namfisa.Induction/Views/Home/Index.cshtml]
@@ -104,10 +116,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW5kdWN0aW9uc1xFZGl0LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/Development/Namfisa.Induction/Views/Inductions/Feedback.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW5kdWN0aW9uc1xGZWVkYmFjay5jc2h0bWw=
-build_metadata.AdditionalFiles.CssScope = 
-
 [D:/Development/Namfisa.Induction/Views/Inductions/Import.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSW5kdWN0aW9uc1xJbXBvcnQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -126,6 +134,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/Development/Namfisa.Induction/Views/Shared/Error.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXEVycm9yLmNzaHRtbA==
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/Development/Namfisa.Induction/Views/Shared/_EmployeeLayout.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcU2hhcmVkXF9FbXBsb3llZUxheW91dC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/Development/Namfisa.Induction/Views/Shared/_ValidationScriptsPartial.cshtml]

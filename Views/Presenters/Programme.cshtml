@@ -4,7 +4,10 @@
     var present = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Present);
     var absent = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Absent);
     var pending = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Pending);
-    var attendeesWithEmail = Model.Attendees.Count(x => !string.IsNullOrWhiteSpace(x.Induction.EmployeeEmail));
+    var attendeesWithEmail = Model.Attendees.Count(x =>
+        x.Status == ProgrammeAttendanceStatus.Pending
+        && !x.ConfirmedAtUtc.HasValue
+        && !string.IsNullOrWhiteSpace(x.Induction.EmployeeEmail));
     var feedbackEligible = Model.Attendees.Count(x =>
         x.Status == ProgrammeAttendanceStatus.Present
         && !x.HasFeedback
@@ -263,7 +266,7 @@ else
                                 <div><time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time><span><strong>@session.Division</strong><small>@session.PresenterName</small></span></div>
                             }
                         </div>
-                        <small>The email contains only an attendance-confirmation link and attaches the employee attendance guide.</small>
+                        <small>The email contains a one-time attendance-confirmation link and attaches the employee attendance guide.</small>
                     </div>
                     <div class="invitation-selection-toolbar">
                         <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAllAttendance" disabled="@(attendeesWithEmail == 0 ? "disabled" : null)" /><label class="form-check-label" for="selectAllAttendance">Select all attendees with email</label></div>
@@ -273,8 +276,9 @@ else
                         @foreach (var attendee in Model.Attendees)
                         {
                             var hasEmail = !string.IsNullOrWhiteSpace(attendee.Induction.EmployeeEmail);
-                            <label class="invitation-choice @(hasEmail ? string.Empty : "is-unavailable")" for="attendance-invite-@attendee.Induction.Id">
-                                <input class="form-check-input attendance-invite-checkbox" type="checkbox" name="InductionCaseIds" value="@attendee.Induction.Id" id="attendance-invite-@attendee.Induction.Id" disabled="@(hasEmail ? null : "disabled")" />
+                            var eligible = hasEmail && attendee.Status == ProgrammeAttendanceStatus.Pending && !attendee.ConfirmedAtUtc.HasValue;
+                            <label class="invitation-choice @(eligible ? string.Empty : "is-unavailable")" for="attendance-invite-@attendee.Induction.Id">
+                                <input class="form-check-input attendance-invite-checkbox" type="checkbox" name="InductionCaseIds" value="@attendee.Induction.Id" id="attendance-invite-@attendee.Induction.Id" disabled="@(eligible ? null : "disabled")" />
                                 <span class="invitation-choice-copy"><strong>@attendee.Induction.EmployeeName</strong><span>@(hasEmail ? attendee.Induction.EmployeeEmail : "Email address not recorded")</span></span>
                                 <span class="invitation-choice-status">@(attendee.InvitationSentAtUtc.HasValue ? $"Last sent {attendee.InvitationSentAtUtc.Value.ToLocalTime():dd MMM yyyy HH:mm}" : attendee.Status.ToString())</span>
                             </label>
@@ -303,8 +307,8 @@ else
                     }
                     <div class="invitation-email-summary mb-3">
                         <strong>Available after programme completion</strong>
-                        <span>The secure link opens the employee's programme feedback form.</span>
-                        <small>The email attaches the feedback guide. Only present employees without an existing response can be selected.</small>
+                        <span>The secure one-time link opens a standalone employee feedback form.</span>
+                        <small>The email attaches the feedback guide. Only present employees without an existing response can be selected, and each link stops working after submission.</small>
                     </div>
                     <div class="invitation-selection-toolbar">
                         <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAllFeedback" disabled="@(feedbackEligible == 0 ? "disabled" : null)" /><label class="form-check-label" for="selectAllFeedback">Select all eligible employees</label></div>

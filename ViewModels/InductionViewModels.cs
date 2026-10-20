@@ -105,8 +105,6 @@ public class InductionDetailsViewModel
 
 public class EmployeeFeedbackInputModel
 {
-    public int InductionCaseId { get; set; }
-
     [Required, Range(1, 5), Display(Name = "Understanding of the organisation and its divisions")]
     public int? ProgrammeUnderstandingRating { get; set; }
 
@@ -138,11 +136,25 @@ public class EmployeeFeedbackInputModel
     public string? AdditionalComments { get; set; }
 }
 
-public class EmployeeFeedbackPageViewModel
+public class EmployeeAttendancePortalViewModel
 {
-    public required InductionCase Induction { get; set; }
+    public Guid Token { get; set; }
+    public required string EmployeeName { get; set; }
+    public required string ProgrammeTitle { get; set; }
+}
+
+public class EmployeeFeedbackPortalViewModel
+{
+    public Guid Token { get; set; }
+    public required InductionProgramme Programme { get; set; }
     public EmployeeFeedbackInputModel Feedback { get; set; } = new();
-    public ProgrammeAttendanceStatus AttendanceStatus { get; set; }
+}
+
+public class EmployeePortalMessageViewModel
+{
+    public required string Title { get; set; }
+    public required string Message { get; set; }
+    public bool IsSuccess { get; set; }
 }
 
 public class PresentationRatingInputModel

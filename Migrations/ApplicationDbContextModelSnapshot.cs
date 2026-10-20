@@ -516,6 +516,16 @@ namespace Namfisa.Induction.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<Guid?>("AttendanceAccessToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("AttendanceAccessTokenIssuedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("AttendanceAccessTokenUsedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("AuthenticationType")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -545,6 +555,16 @@ namespace Namfisa.Induction.Migrations
                     b.Property<string>("ConfirmedBySid")
                         .HasMaxLength(184)
                         .HasColumnType("nvarchar(184)");
+
+                    b.Property<Guid?>("FeedbackAccessToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("FeedbackAccessTokenIssuedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FeedbackAccessTokenUsedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FeedbackInvitationSentAtUtc")
                         .HasColumnType("datetime2");
@@ -578,6 +598,14 @@ namespace Namfisa.Induction.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AttendanceAccessToken")
+                        .IsUnique()
+                        .HasFilter("[AttendanceAccessToken] IS NOT NULL");
+
+                    b.HasIndex("FeedbackAccessToken")
+                        .IsUnique()
+                        .HasFilter("[FeedbackAccessToken] IS NOT NULL");
 
                     b.HasIndex("InductionCaseId")
                         .IsUnique();

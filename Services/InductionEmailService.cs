@@ -148,7 +148,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         var feedbackNote = InductionProgrammeRules.RequiresFeedback(programme)
             ? "A separate feedback invitation will be sent after the programme is completed."
             : "Employee feedback and evaluation are not required for this programme.";
-        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\nYou are scheduled to attend {programme.Title} on {programme.ProgrammeDate:dddd, dd MMMM yyyy} at {venue}. Please review the programme schedule below, then use the link to confirm whether you will be present or absent.\r\n\r\nProgramme schedule:\r\n{scheduleText}\r\n\r\nConfirm attendance: {attendanceUrl}\r\n\r\nA step-by-step attendance confirmation guide is attached to this email. {feedbackNote}";
+        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\nYou are scheduled to attend {programme.Title} on {programme.ProgrammeDate:dddd, dd MMMM yyyy} at {venue}. Please review the programme schedule below, then use the one-time link to confirm whether you will be present or absent.\r\n\r\nProgramme schedule:\r\n{scheduleText}\r\n\r\nConfirm attendance: {attendanceUrl}\r\n\r\nThe link opens a standalone confirmation page for your Windows account and stops working after you submit your response. A step-by-step attendance confirmation guide is attached to this email. {feedbackNote}";
 
         using var message = new MailMessage
         {
@@ -204,7 +204,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         }
 
         var subject = $"Feedback and evaluation: {programme.Title}";
-        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\n{programme.Title} has been completed. Please use the secure link below and sign in with your NAMFISA Windows account to rate each presentation included in the evaluation and complete the overall programme evaluation.\r\n\r\nComplete feedback and evaluation: {feedbackUrl}\r\n\r\nThe attached guide explains each step. Feedback can be submitted only once.";
+        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\n{programme.Title} has been completed. Please use the one-time link below and sign in with your NAMFISA Windows account to rate each presentation included in the evaluation and complete the overall programme evaluation.\r\n\r\nComplete feedback and evaluation: {feedbackUrl}\r\n\r\nThe link opens a standalone employee form and stops working after submission. The attached guide explains each step.";
 
         using var message = new MailMessage
         {
@@ -469,7 +469,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
                         <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Confirm attendance</a>
                       </td></tr></table>
-                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Attendance guide attached</strong><br>The attached one-page guide explains how to review the schedule and confirm attendance. {{safeFeedbackNote}}</div>
+                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">One-time employee link</strong><br>The button opens a standalone attendance page for your Windows account and stops working after you submit. The attached one-page guide explains how to confirm attendance. {{safeFeedbackNote}}</div>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">Attendance confirmations are recorded against the authenticated employee AD account.</td></tr>
@@ -513,7 +513,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
                         <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Complete feedback and evaluation</a>
                       </td></tr></table>
-                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Feedback guide attached</strong><br>Rate each presentation shown, answer the overall programme questions and review your responses before submitting. Feedback can be submitted only once.</div>
+                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">One-time employee link</strong><br>The button opens a standalone form for your Windows account and stops working after submission. Rate each presentation shown, answer the overall questions and review your responses before submitting.</div>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">Feedback is recorded against the authenticated employee AD account.</td></tr>

@@ -270,7 +270,8 @@ public class PresentersController(
                 continue;
             }
 
-            var feedbackUrl = BuildFeedbackUrl(employee.AccessToken);
+            var feedbackToken = Guid.NewGuid();
+            var feedbackUrl = BuildFeedbackUrl(feedbackToken);
             if (string.IsNullOrWhiteSpace(feedbackUrl))
             {
                 failures.Add($"{employee.EmployeeName}: feedback link could not be created.");
@@ -286,6 +287,9 @@ public class PresentersController(
                     HttpContext.RequestAborted);
 
                 var attendance = GetOrCreateAttendance(programme, employee);
+                attendance.FeedbackAccessToken = feedbackToken;
+                attendance.FeedbackAccessTokenIssuedAtUtc = DateTime.UtcNow;
+                attendance.FeedbackAccessTokenUsedAtUtc = null;
                 attendance.FeedbackInvitationSentAtUtc = DateTime.UtcNow;
                 attendance.FeedbackInvitationSentBy = sentBy;
                 attendance.FeedbackInvitationSentTo = employee.EmployeeEmail.Trim();
@@ -354,13 +358,20 @@ public class PresentersController(
 
         foreach (var attendee in attendees)
         {
+            if (attendee.ProgrammeAttendance?.ConfirmedAtUtc is not null
+                || attendee.ProgrammeAttendance?.Status is ProgrammeAttendanceStatus.Present or ProgrammeAttendanceStatus.Absent)
+            {
+                failures.Add($"{attendee.EmployeeName}: attendance has already been confirmed.");
+                continue;
+            }
             if (string.IsNullOrWhiteSpace(attendee.EmployeeEmail))
             {
                 failures.Add($"{attendee.EmployeeName}: email address is missing.");
                 continue;
             }
 
-            var attendanceUrl = BuildAttendanceUrl(attendee.Id);
+            var attendanceToken = Guid.NewGuid();
+            var attendanceUrl = BuildAttendanceUrl(attendanceToken);
             if (string.IsNullOrWhiteSpace(attendanceUrl))
             {
                 failures.Add($"{attendee.EmployeeName}: attendance link could not be created.");
@@ -376,6 +387,9 @@ public class PresentersController(
                     HttpContext.RequestAborted);
 
                 var attendance = GetOrCreateAttendance(programme, attendee);
+                attendance.AttendanceAccessToken = attendanceToken;
+                attendance.AttendanceAccessTokenIssuedAtUtc = DateTime.UtcNow;
+                attendance.AttendanceAccessTokenUsedAtUtc = null;
                 attendance.InvitationSentAtUtc = DateTime.UtcNow;
                 attendance.InvitationSentBy = sentBy;
                 attendance.InvitationSentTo = attendee.EmployeeEmail.Trim();
@@ -510,35 +524,41 @@ public class PresentersController(
         attendance.ConfirmationSource = source;
         attendance.AuthenticationType = User.Identity?.AuthenticationType;
         attendance.ConfirmedBySid = (User.Identity as WindowsIdentity)?.User?.Value;
+        if (attendance.AttendanceAccessToken.HasValue)
+        {
+            attendance.AttendanceAccessToken = null;
+            attendance.AttendanceAccessTokenUsedAtUtc = DateTime.UtcNow;
+        }
     }
 
-    private string? BuildAttendanceUrl(int inductionCaseId)
+    private string? BuildAttendanceUrl(Guid token)
     {
+        var tokenText = token.ToString("N");
         if (emailService.PublicBaseUrl is { Length: > 0 } publicBaseUrl)
         {
-            return $"{publicBaseUrl.TrimEnd('/')}/Attendance/Confirm/{inductionCaseId}";
+            return $"{publicBaseUrl.TrimEnd('/')}/Employee/Attendance/{tokenText}";
         }
 
         return Url.Action(
-            "Confirm",
             "Attendance",
-            new { id = inductionCaseId },
+            "EmployeePortal",
+            new { token = tokenText },
             Request.Scheme,
             Request.Host.Value);
     }
 
-    private string? BuildFeedbackUrl(Guid accessToken)
+    private string? BuildFeedbackUrl(Guid token)
     {
-        var token = accessToken.ToString("N");
+        var tokenText = token.ToString("N");
         if (emailService.PublicBaseUrl is { Length: > 0 } publicBaseUrl)
         {
-            return $"{publicBaseUrl.TrimEnd('/')}/Inductions/Feedback/{token}";
+            return $"{publicBaseUrl.TrimEnd('/')}/Employee/Feedback/{tokenText}";
         }
 
         return Url.Action(
             "Feedback",
-            "Inductions",
-            new { id = token },
+            "EmployeePortal",
+            new { token = tokenText },
             Request.Scheme,
             Request.Host.Value);
     }

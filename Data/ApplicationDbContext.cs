@@ -112,6 +112,16 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<ProgrammeAttendance>()
             .HasIndex(x => new { x.InductionProgrammeId, x.Status });
 
+        modelBuilder.Entity<ProgrammeAttendance>()
+            .HasIndex(x => x.AttendanceAccessToken)
+            .IsUnique()
+            .HasFilter("[AttendanceAccessToken] IS NOT NULL");
+
+        modelBuilder.Entity<ProgrammeAttendance>()
+            .HasIndex(x => x.FeedbackAccessToken)
+            .IsUnique()
+            .HasFilter("[FeedbackAccessToken] IS NOT NULL");
+
         modelBuilder.Entity<ChecklistTemplateItem>()
             .HasIndex(x => new { x.Phase, x.SortOrder });
 

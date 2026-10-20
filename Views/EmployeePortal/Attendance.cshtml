@@ -1,0 +1,31 @@
+@model EmployeeAttendancePortalViewModel
+@{
+    Layout = "_EmployeeLayout";
+    ViewData["Title"] = "Confirm attendance";
+}
+
+<section class="employee-portal-card employee-portal-card-compact">
+    <p class="eyebrow">One-time attendance confirmation</p>
+    <h1>Confirm your attendance</h1>
+    <p class="employee-portal-intro">Hello <strong>@Model.EmployeeName</strong>. Please confirm your attendance for <strong>@Model.ProgrammeTitle</strong>.</p>
+
+    <form asp-controller="EmployeePortal" asp-action="Attendance" asp-route-token="@Model.Token" method="post">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+        <div class="employee-response-grid">
+            <button class="employee-response-button is-present" type="submit" name="status" value="Present">
+                <span aria-hidden="true">✓</span>
+                <strong>I am present</strong>
+            </button>
+            <button class="employee-response-button is-absent" type="submit" name="status" value="Absent">
+                <span aria-hidden="true">×</span>
+                <strong>I am absent</strong>
+            </button>
+        </div>
+    </form>
+
+    <p class="employee-portal-security">This link can be submitted once and is valid only for your Windows account.</p>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow,noarchive" />
+    <meta name="referrer" content="no-referrer" />
+    <title>@ViewData["Title"] - NAMFISA Employee Induction</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/employee-portal.css" asp-append-version="true" />
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body class="employee-portal-body">
+    <header class="employee-portal-header">
+        <img src="~/images/namfisa-logo.png" alt="NAMFISA" />
+        <span><strong>Employee Induction</strong><small>Secure employee response</small></span>
+    </header>
+    <main class="employee-portal-main">
+        @RenderBody()
+    </main>
+    <footer class="employee-portal-footer">NAMFISA Employee Services · Signed in as @User.Identity?.Name</footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

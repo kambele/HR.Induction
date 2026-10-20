@@ -1,0 +1,13 @@
+@model EmployeePortalMessageViewModel
+@{
+    Layout = "_EmployeeLayout";
+    ViewData["Title"] = Model.Title;
+}
+
+<section class="employee-portal-card employee-message-card is-success">
+    <span class="employee-message-icon" aria-hidden="true">✓</span>
+    <h1>@Model.Title</h1>
+    <p>@Model.Message</p>
+    <p class="employee-close-note">You can safely close this window.</p>
+    <button class="btn btn-primary" type="button" onclick="window.close()">Close window</button>
+</section>

@@ -339,9 +339,8 @@
                 else if (Model.CanSubmitFeedback)
                 {
                     <div class="empty-state">
-                        <h3>Feedback form is ready</h3>
-                        <p>Rate the applicable presentations and the overall programme on the dedicated employee form.</p>
-                        <a class="btn btn-primary" asp-action="Feedback" asp-route-id="@(induction.AccessToken.ToString("N"))">Open feedback form</a>
+                        <h3>Feedback invitation is ready</h3>
+                        <p>HRBP must send the employee a secure one-time feedback and evaluation link from the programme workspace.</p>
                     </div>
                 }
                 else
@@ -361,8 +360,7 @@
                         }
                         else if (induction.ProgrammeAttendance?.Status != ProgrammeAttendanceStatus.Present && AccessService.CanSelfConfirmAttendance(User, induction))
                         {
-                            <p>Confirm attendance before completing the programme feedback form.</p>
-                            <a class="btn btn-primary" asp-controller="Attendance" asp-action="Confirm" asp-route-id="@induction.Id">Confirm attendance</a>
+                            <p>Attendance and feedback are completed only through the secure one-time links sent by HRBP.</p>
                         }
                         else
                         {

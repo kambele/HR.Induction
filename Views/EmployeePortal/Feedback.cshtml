@@ -1,0 +1,96 @@
+@model EmployeeFeedbackPortalViewModel
+@{
+    Layout = "_EmployeeLayout";
+    ViewData["Title"] = "Feedback and evaluation";
+    var programme = Model.Programme;
+    var sessions = programme.Sessions.Where(x => x.RequiresFeedback).OrderBy(x => x.SortOrder).ToList();
+}
+
+<section class="employee-portal-card employee-feedback-card">
+    <p class="eyebrow">One-time employee evaluation</p>
+    <h1>Feedback and evaluation</h1>
+    <p class="employee-portal-intro">Please evaluate <strong>@programme.Title</strong>. Only presentations marked for employee feedback are listed.</p>
+
+    <form asp-controller="EmployeePortal" asp-action="Feedback" asp-route-token="@Model.Token" method="post">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+
+        <section class="employee-form-section">
+            <h2>Presentation ratings</h2>
+            <div class="programme-rating-table">
+                @for (var index = 0; index < sessions.Count; index++)
+                {
+                    var session = sessions[index];
+                    var selectedRating = Model.Feedback.PresentationRatings.FirstOrDefault(x => x.ProgrammeSessionId == session.Id)?.Rating;
+                    <div class="programme-rating-row">
+                        <input type="hidden" name="PresentationRatings[@index].ProgrammeSessionId" value="@session.Id" />
+                        <label for="presentation-rating-@session.Id"><strong>@session.Division</strong><small>@session.PresenterName · @session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</small></label>
+                        <select class="form-select" id="presentation-rating-@session.Id" name="PresentationRatings[@index].Rating" required>
+                            <option value="">Select rating</option>
+                            <option value="1" selected="@(selectedRating == 1 ? "selected" : null)">1 - Poor</option>
+                            <option value="2" selected="@(selectedRating == 2 ? "selected" : null)">2 - Fair</option>
+                            <option value="3" selected="@(selectedRating == 3 ? "selected" : null)">3 - Good</option>
+                            <option value="4" selected="@(selectedRating == 4 ? "selected" : null)">4 - Very good</option>
+                            <option value="5" selected="@(selectedRating == 5 ? "selected" : null)">5 - Excellent</option>
+                        </select>
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="employee-form-section">
+            <h2>Overall programme evaluation</h2>
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <label class="form-label" for="programme-understanding">The programme provided a good understanding of the organisation and its divisions</label>
+                    <select class="form-select" id="programme-understanding" name="ProgrammeUnderstandingRating" required>
+                        <option value="">Select rating</option>
+                        <option value="5" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 5 ? "selected" : null)">Strongly agree</option>
+                        <option value="4" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 4 ? "selected" : null)">Agree</option>
+                        <option value="3" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 3 ? "selected" : null)">Neutral</option>
+                        <option value="2" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 2 ? "selected" : null)">Disagree</option>
+                        <option value="1" selected="@(Model.Feedback.ProgrammeUnderstandingRating == 1 ? "selected" : null)">Strongly disagree</option>
+                    </select>
+                </div>
+                <div class="col-lg-4">
+                    <label class="form-label" for="time-allocation">Presentation time allocation</label>
+                    <select class="form-select" id="time-allocation" name="TimeAllocationResponse" required>
+                        <option value="">Select response</option>
+                        <option value="Appropriate" selected="@(Model.Feedback.TimeAllocationResponse == TimeAllocationResponse.Appropriate ? "selected" : null)">Yes, appropriate</option>
+                        <option value="TooShort" selected="@(Model.Feedback.TimeAllocationResponse == TimeAllocationResponse.TooShort ? "selected" : null)">Too short</option>
+                        <option value="TooLong" selected="@(Model.Feedback.TimeAllocationResponse == TimeAllocationResponse.TooLong ? "selected" : null)">Too long</option>
+                    </select>
+                </div>
+                <div class="col-lg-4">
+                    <label class="form-label" for="overall-rating">Overall corporate induction programme rating</label>
+                    <select class="form-select" id="overall-rating" name="OverallProgrammeRating" required>
+                        <option value="">Select rating</option>
+                        <option value="5" selected="@(Model.Feedback.OverallProgrammeRating == 5 ? "selected" : null)">Excellent</option>
+                        <option value="4" selected="@(Model.Feedback.OverallProgrammeRating == 4 ? "selected" : null)">Very good</option>
+                        <option value="3" selected="@(Model.Feedback.OverallProgrammeRating == 3 ? "selected" : null)">Good</option>
+                        <option value="2" selected="@(Model.Feedback.OverallProgrammeRating == 2 ? "selected" : null)">Fair</option>
+                        <option value="1" selected="@(Model.Feedback.OverallProgrammeRating == 1 ? "selected" : null)">Poor</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <section class="employee-form-section">
+            <h2>Your comments</h2>
+            <div class="mb-3">
+                <label class="form-label" for="valuable-aspect">What was the most valuable aspect of the induction programme?</label>
+                <textarea class="form-control" id="valuable-aspect" name="MostValuableAspect" rows="4" maxlength="2000" required>@Model.Feedback.MostValuableAspect</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="improvements">What improvements would you recommend for future induction programmes?</label>
+                <textarea class="form-control" id="improvements" name="ImprovementRecommendations" rows="4" maxlength="2000" required>@Model.Feedback.ImprovementRecommendations</textarea>
+            </div>
+        </section>
+
+        <button class="btn btn-primary btn-lg employee-submit-button" type="submit">Submit feedback and evaluation</button>
+        <p class="employee-portal-security">Your response can be submitted once. After submission, this link will no longer open the form.</p>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

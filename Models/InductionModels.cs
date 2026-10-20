@@ -352,6 +352,12 @@ public class ProgrammeAttendance
     public DateTime? ConfirmedAtUtc { get; set; }
     public DateTime? InvitationSentAtUtc { get; set; }
 
+    [ConcurrencyCheck]
+    public Guid? AttendanceAccessToken { get; set; }
+
+    public DateTime? AttendanceAccessTokenIssuedAtUtc { get; set; }
+    public DateTime? AttendanceAccessTokenUsedAtUtc { get; set; }
+
     [StringLength(150)]
     public string? InvitationSentBy { get; set; }
 
@@ -359,6 +365,12 @@ public class ProgrammeAttendance
     public string? InvitationSentTo { get; set; }
 
     public DateTime? FeedbackInvitationSentAtUtc { get; set; }
+
+    [ConcurrencyCheck]
+    public Guid? FeedbackAccessToken { get; set; }
+
+    public DateTime? FeedbackAccessTokenIssuedAtUtc { get; set; }
+    public DateTime? FeedbackAccessTokenUsedAtUtc { get; set; }
 
     [StringLength(150)]
     public string? FeedbackInvitationSentBy { get; set; }

@@ -657,145 +657,15 @@ public class InductionsController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> Feedback(string id)
-    {
-        var query = dbContext.InductionCases
-            .AsNoTracking()
-            .Include(x => x.EmployeeFeedback)
-                .ThenInclude(x => x!.PresentationRatings)
-                    .ThenInclude(x => x.InductionProgrammeSession)
-            .Include(x => x.ProgrammeAttendance)
-            .Include(x => x.InductionProgramme)
-                .ThenInclude(x => x!.Sessions);
-
-        InductionCase? inductionCase;
-        if (Guid.TryParse(id, out var accessToken))
-        {
-            inductionCase = await query.SingleOrDefaultAsync(
-                x => x.AccessToken == accessToken,
-                HttpContext.RequestAborted);
-        }
-        else if (int.TryParse(id, out var legacyId))
-        {
-            inductionCase = await query.SingleOrDefaultAsync(
-                x => x.Id == legacyId,
-                HttpContext.RequestAborted);
-        }
-        else
-        {
-            return NotFound();
-        }
-
-        if (inductionCase is null) return NotFound();
-        if (!accessService.CanSubmitFeedback(User, inductionCase)) return Forbid();
-        if (inductionCase.InductionProgramme is null) return BadRequest("No induction programme is assigned to this employee.");
-        if (!InductionProgrammeRules.IsCompleted(inductionCase.InductionProgramme))
-        {
-            TempData["Error"] = "Feedback and evaluation become available after the induction programme is completed.";
-            return RedirectToDetails(inductionCase);
-        }
-        if (!InductionProgrammeRules.RequiresFeedback(inductionCase.InductionProgramme))
-        {
-            TempData["Error"] = "Employee feedback is not required for this induction programme.";
-            return RedirectToDetails(inductionCase);
-        }
-
-        return View(BuildFeedbackPageModel(inductionCase));
-    }
+    public IActionResult Feedback(string id) => RedirectToAction(
+        "Unavailable",
+        "EmployeePortal");
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SubmitFeedback(EmployeeFeedbackInputModel model)
-    {
-        var inductionCase = await dbContext.InductionCases
-            .Include(x => x.EmployeeFeedback)
-            .Include(x => x.ProgrammeAttendance)
-            .Include(x => x.InductionProgramme)
-                .ThenInclude(x => x!.Sessions)
-            .SingleOrDefaultAsync(x => x.Id == model.InductionCaseId);
-
-        if (inductionCase is null) return NotFound();
-        if (!accessService.CanSubmitFeedback(User, inductionCase)) return Forbid();
-        if (inductionCase.InductionProgramme is null
-            || !InductionProgrammeRules.IsCompleted(inductionCase.InductionProgramme))
-        {
-            TempData["Error"] = "Feedback and evaluation become available after the induction programme is completed.";
-            return RedirectToDetails(inductionCase);
-        }
-        if (!InductionProgrammeRules.RequiresFeedback(inductionCase.InductionProgramme))
-        {
-            TempData["Error"] = "Employee feedback is not required for this induction programme.";
-            return RedirectToDetails(inductionCase);
-        }
-        if (inductionCase.EmployeeFeedback is not null)
-        {
-            TempData["Error"] = "Feedback has already been submitted.";
-            return RedirectToAction(nameof(Feedback), new { id = inductionCase.AccessToken.ToString("N") });
-        }
-
-        if (inductionCase.ProgrammeAttendance?.Status != ProgrammeAttendanceStatus.Present)
-        {
-            ModelState.AddModelError(string.Empty, "Attendance must be confirmed as present before feedback can be submitted.");
-        }
-
-        var programmeSessions = inductionCase.InductionProgramme?.Sessions
-            .Where(x => x.RequiresFeedback)
-            .OrderBy(x => x.SortOrder)
-            .ToList() ?? [];
-        var submittedRatings = model.PresentationRatings
-            .GroupBy(x => x.ProgrammeSessionId)
-            .ToDictionary(x => x.Key, x => x.First());
-        if (programmeSessions.Count == 0)
-        {
-            ModelState.AddModelError(nameof(model.PresentationRatings), "An induction programme with scheduled presentations must be assigned first.");
-        }
-        else if (submittedRatings.Count != programmeSessions.Count
-            || programmeSessions.Any(x => !submittedRatings.ContainsKey(x.Id)))
-        {
-            ModelState.AddModelError(nameof(model.PresentationRatings), "Rate every presentation included in the employee evaluation.");
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return View("Feedback", BuildFeedbackPageModel(inductionCase, model));
-        }
-
-        inductionCase.EmployeeFeedback = new EmployeeFeedback
-        {
-            ProgrammeUnderstandingRating = model.ProgrammeUnderstandingRating,
-            TimeAllocationResponse = model.TimeAllocationResponse,
-            OverallProgrammeRating = model.OverallProgrammeRating,
-            MostValuableAspect = model.MostValuableAspect.Trim(),
-            ImprovementRecommendations = model.ImprovementRecommendations.Trim(),
-            PresentationRatings = programmeSessions.Select(session => new PresentationRating
-            {
-                InductionProgrammeSessionId = session.Id,
-                Rating = submittedRatings[session.Id].Rating!.Value
-            }).ToList(),
-            SubmittedBy = accessService.CurrentUsername(User)
-        };
-
-        await dbContext.SaveChangesAsync();
-        TempData["Success"] = "Employee induction feedback submitted.";
-        return RedirectToAction(nameof(Feedback), new { id = inductionCase.AccessToken.ToString("N") });
-    }
-
-    private static EmployeeFeedbackPageViewModel BuildFeedbackPageModel(
-        InductionCase inductionCase,
-        EmployeeFeedbackInputModel? feedback = null) => new()
-    {
-        Induction = inductionCase,
-        AttendanceStatus = inductionCase.ProgrammeAttendance?.Status ?? ProgrammeAttendanceStatus.Pending,
-        Feedback = feedback ?? new EmployeeFeedbackInputModel
-        {
-            InductionCaseId = inductionCase.Id,
-            PresentationRatings = inductionCase.InductionProgramme?.Sessions
-                .Where(x => x.RequiresFeedback)
-                .OrderBy(x => x.SortOrder)
-                .Select(x => new PresentationRatingInputModel { ProgrammeSessionId = x.Id })
-                .ToList() ?? []
-        }
-    };
+    public IActionResult SubmitFeedback(EmployeeFeedbackInputModel model) => RedirectToAction(
+        "Unavailable",
+        "EmployeePortal");
 
     [HttpPost]
     [ValidateAntiForgeryToken]
