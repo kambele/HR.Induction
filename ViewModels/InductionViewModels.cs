@@ -75,6 +75,8 @@ public class InductionImportResult
     public int ImportedCount { get; set; }
     public int DuplicateCount { get; set; }
     public int FailedCount { get; set; }
+    public int MasterDataAddedCount { get; set; }
+    public int MasterDataReactivatedCount { get; set; }
     public string Message { get; set; } = string.Empty;
     public List<InductionImportRowResult> Rows { get; set; } = [];
 

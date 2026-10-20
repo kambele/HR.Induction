@@ -75,23 +75,31 @@ public class InductionImportService(
             return InductionImportResult.Invalid($"The workbook contains {dataRows.Count} employee rows. Upload a maximum of {MaximumRows} rows at a time.");
         }
 
-        var masterItems = await dbContext.MasterDataItems
-            .AsNoTracking()
-            .Where(x => x.IsActive &&
-                (x.Category == MasterDataCategory.EmployeeTitle
-                 || x.Category == MasterDataCategory.Gender
-                 || x.Category == MasterDataCategory.Department
-                 || x.Category == MasterDataCategory.Division))
-            .ToListAsync(cancellationToken);
-
-        var titles = MasterLookup(masterItems, MasterDataCategory.EmployeeTitle);
-        var genders = MasterLookup(masterItems, MasterDataCategory.Gender);
-        var departments = MasterLookup(masterItems, MasterDataCategory.Department);
-        var divisions = MasterLookup(masterItems, MasterDataCategory.Division);
-
         await using var transaction = await dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
+
+        var masterItems = await dbContext.MasterDataItems
+            .Where(x => x.Category == MasterDataCategory.EmployeeTitle
+                     || x.Category == MasterDataCategory.Gender
+                     || x.Category == MasterDataCategory.Department
+                     || x.Category == MasterDataCategory.Division)
+            .ToListAsync(cancellationToken);
+
+        var titles = MasterLookup(masterItems.Where(x => x.IsActive), MasterDataCategory.EmployeeTitle);
+        var genders = MasterLookup(masterItems.Where(x => x.IsActive), MasterDataCategory.Gender);
+        var departments = MasterItemLookup(masterItems, MasterDataCategory.Department);
+        var divisions = MasterItemLookup(masterItems, MasterDataCategory.Division);
+        var nextDepartmentSortOrder = masterItems
+            .Where(x => x.Category == MasterDataCategory.Department)
+            .Select(x => x.SortOrder)
+            .DefaultIfEmpty()
+            .Max();
+        var nextDivisionSortOrder = masterItems
+            .Where(x => x.Category == MasterDataCategory.Division)
+            .Select(x => x.SortOrder)
+            .DefaultIfEmpty()
+            .Max();
 
         var existingKeys = await dbContext.InductionCases
             .AsNoTracking()
@@ -133,8 +141,8 @@ public class InductionImportService(
 
             title = CanonicalMasterValue(title, titles, "Employee Title", errors);
             gender = CanonicalMasterValue(gender, genders, "Gender", errors);
-            department = CanonicalMasterValue(department, departments, "Department", errors);
-            division = CanonicalMasterValue(division, divisions, "Division", errors);
+            department = CanonicalManagedMasterValue(department, departments);
+            division = CanonicalManagedMasterValue(division, divisions);
 
             var employeeName = $"{title} {firstName} {lastName}".Trim();
             if (employeeName.Length > 150)
@@ -156,6 +164,25 @@ public class InductionImportService(
                 result.Rows.Add(new InductionImportRowResult(rowNumber, employeeLabel, "Duplicate", duplicateReason));
                 continue;
             }
+
+            var administrationChanges = new List<string>();
+            department = EnsureImportedMasterValue(
+                department,
+                MasterDataCategory.Department,
+                departments,
+                ref nextDepartmentSortOrder,
+                createdBy,
+                out var departmentChange);
+            RecordMasterDataChange("Department", departmentChange, result, administrationChanges);
+
+            division = EnsureImportedMasterValue(
+                division,
+                MasterDataCategory.Division,
+                divisions,
+                ref nextDivisionSortOrder,
+                createdBy,
+                out var divisionChange);
+            RecordMasterDataChange("Division", divisionChange, result, administrationChanges);
 
             var inductionCase = new InductionCase
             {
@@ -183,7 +210,10 @@ public class InductionImportService(
             employeeAdIds.Add(employeeAdId);
             if (!string.IsNullOrWhiteSpace(employeeNumber)) employeeNumbers.Add(employeeNumber);
             result.ImportedCount++;
-            result.Rows.Add(new InductionImportRowResult(rowNumber, employeeName, "Imported", "Induction plan created."));
+            var rowMessage = administrationChanges.Count == 0
+                ? "Induction plan created."
+                : $"Induction plan created. {string.Join(" ", administrationChanges)}";
+            result.Rows.Add(new InductionImportRowResult(rowNumber, employeeName, "Imported", rowMessage));
         }
 
         if (result.ImportedCount > 0)
@@ -195,6 +225,14 @@ public class InductionImportService(
         result.Message = result.ImportedCount == 0
             ? "No new induction plans were imported. Review the duplicate and failed rows below."
             : $"Imported {result.ImportedCount} induction plan{(result.ImportedCount == 1 ? string.Empty : "s")}.";
+        if (result.MasterDataAddedCount > 0)
+        {
+            result.Message += $" Added {result.MasterDataAddedCount} new department or division value{(result.MasterDataAddedCount == 1 ? string.Empty : "s")} to Administration.";
+        }
+        if (result.MasterDataReactivatedCount > 0)
+        {
+            result.Message += $" Reactivated {result.MasterDataReactivatedCount} archived department or division value{(result.MasterDataReactivatedCount == 1 ? string.Empty : "s")}.";
+        }
         return result;
     }
 
@@ -226,6 +264,80 @@ public class InductionImportService(
         items.Where(x => x.Category == category)
             .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
             .ToDictionary(x => x.Key, x => x.First().Name.Trim(), StringComparer.OrdinalIgnoreCase);
+
+    private static Dictionary<string, MasterDataItem> MasterItemLookup(
+        IEnumerable<MasterDataItem> items,
+        MasterDataCategory category) =>
+        items.Where(x => x.Category == category)
+            .GroupBy(x => x.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
+
+    private static string CanonicalManagedMasterValue(
+        string value,
+        IReadOnlyDictionary<string, MasterDataItem> existingValues)
+    {
+        if (value.Length == 0) return value;
+        return existingValues.TryGetValue(value, out var existing) ? existing.Name.Trim() : value;
+    }
+
+    private string EnsureImportedMasterValue(
+        string value,
+        MasterDataCategory category,
+        IDictionary<string, MasterDataItem> existingValues,
+        ref int nextSortOrder,
+        string updatedBy,
+        out MasterDataImportChange change)
+    {
+        if (existingValues.TryGetValue(value, out var existing))
+        {
+            if (!existing.IsActive)
+            {
+                existing.IsActive = true;
+                existing.UpdatedAtUtc = DateTime.UtcNow;
+                existing.UpdatedBy = updatedBy;
+                change = MasterDataImportChange.Reactivated;
+            }
+            else
+            {
+                change = MasterDataImportChange.None;
+            }
+
+            return existing.Name.Trim();
+        }
+
+        var item = new MasterDataItem
+        {
+            Category = category,
+            Name = value,
+            SortOrder = ++nextSortOrder,
+            IsActive = true,
+            UpdatedAtUtc = DateTime.UtcNow,
+            UpdatedBy = updatedBy
+        };
+        dbContext.MasterDataItems.Add(item);
+        existingValues.Add(value, item);
+        change = MasterDataImportChange.Added;
+        return item.Name;
+    }
+
+    private static void RecordMasterDataChange(
+        string label,
+        MasterDataImportChange change,
+        InductionImportResult result,
+        ICollection<string> rowMessages)
+    {
+        switch (change)
+        {
+            case MasterDataImportChange.Added:
+                result.MasterDataAddedCount++;
+                rowMessages.Add($"{label} added to Administration.");
+                break;
+            case MasterDataImportChange.Reactivated:
+                result.MasterDataReactivatedCount++;
+                rowMessages.Add($"{label} reactivated in Administration.");
+                break;
+        }
+    }
 
     private static string Required(string value, string field, int maximumLength, ICollection<string> errors)
     {
@@ -304,5 +416,12 @@ public class InductionImportService(
             return $"Employee Number '{employeeNumber}' already has an induction plan.";
         }
         return null;
+    }
+
+    private enum MasterDataImportChange
+    {
+        None,
+        Added,
+        Reactivated
     }
 }

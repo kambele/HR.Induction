@@ -54,6 +54,42 @@ public class InductionProgrammeSessionInputModel
     public TimeSpan? EndTime { get; set; }
 }
 
+public class InductionProgrammeDetailsViewModel
+{
+    public required InductionProgramme Programme { get; set; }
+    public IReadOnlyList<ProgrammeEmployeeSelectionItemViewModel> AssignedEmployees { get; set; } = [];
+    public IReadOnlyList<ProgrammeEmployeeSelectionItemViewModel> AvailableEmployees { get; set; } = [];
+}
+
+public class ProgrammeEmployeeSelectionItemViewModel
+{
+    public int Id { get; set; }
+    public Guid AccessToken { get; set; }
+    public string EmployeeName { get; set; } = string.Empty;
+    public string EmployeeUsername { get; set; } = string.Empty;
+    public string Department { get; set; } = string.Empty;
+    public string Division { get; set; } = string.Empty;
+    public InductionStatus Status { get; set; }
+    public int? CurrentProgrammeId { get; set; }
+    public string? CurrentProgrammeTitle { get; set; }
+    public int ApplicableTaskCount { get; set; }
+    public int TotalTaskCount { get; set; }
+    public int SignOffCount { get; set; }
+    public bool HasFeedback { get; set; }
+    public bool CanAssign { get; set; }
+    public bool CanApplyPhases { get; set; }
+    public string? ProtectionReason { get; set; }
+}
+
+public class ProgrammeEmployeeSelectionInputModel
+{
+    [Required]
+    public int ProgrammeId { get; set; }
+
+    [Required, MinLength(1, ErrorMessage = "Select at least one employee induction.")]
+    public int[] InductionCaseIds { get; set; } = [];
+}
+
 public class InductionProgrammeReportViewModel
 {
     public required InductionProgramme Programme { get; set; }

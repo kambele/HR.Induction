@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Namfisa.Induction")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fb74cfc3ae04a0c832f497d60db871c69857fe35")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+da8540080cbf5baca1a871aad6ca362d8a72f3e9")]
 [assembly: System.Reflection.AssemblyProductAttribute("Namfisa.Induction")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Namfisa.Induction")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

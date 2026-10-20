@@ -11,7 +11,9 @@ namespace Namfisa.Induction.Controllers;
 public class InductionProgrammesController(
     ApplicationDbContext dbContext,
     IUserAccessService accessService,
-    IInductionReportService reportService) : Controller
+    IInductionReportService reportService,
+    IInductionWorkflowService workflowService,
+    IWorkflowConfigurationService workflowConfigurationService) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -33,7 +35,177 @@ public class InductionProgrammesController(
     {
         if (!accessService.IsHr(User)) return Forbid();
         var programme = await ProgrammeQuery().SingleOrDefaultAsync(x => x.Id == id, HttpContext.RequestAborted);
-        return programme is null ? NotFound() : View(programme);
+        if (programme is null) return NotFound();
+
+        var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
+        var employees = await dbContext.InductionCases
+            .AsNoTracking()
+            .OrderBy(x => x.EmployeeName)
+            .Select(x => new ProgrammeEmployeeSelectionItemViewModel
+            {
+                Id = x.Id,
+                AccessToken = x.AccessToken,
+                EmployeeName = x.EmployeeName,
+                EmployeeUsername = x.EmployeeUsername,
+                Department = x.Department,
+                Division = x.Division,
+                Status = x.Status,
+                CurrentProgrammeId = x.InductionProgrammeId,
+                CurrentProgrammeTitle = x.InductionProgramme == null ? null : x.InductionProgramme.Title,
+                ApplicableTaskCount = x.Tasks.Count(task => !task.ExcludedByProgramme),
+                TotalTaskCount = x.Tasks.Count,
+                SignOffCount = x.SignOffs.Count,
+                HasFeedback = x.EmployeeFeedback != null
+            })
+            .ToListAsync(HttpContext.RequestAborted);
+
+        foreach (var employee in employees)
+        {
+            var signOffLocked = settings.LockChecklistWhenSignOffStarts && employee.SignOffCount > 0;
+            employee.CanAssign = employee.CurrentProgrammeId == programme.Id
+                || (!employee.HasFeedback && !signOffLocked);
+            employee.CanApplyPhases = employee.CurrentProgrammeId == programme.Id && !signOffLocked;
+            employee.ProtectionReason = employee.HasFeedback && employee.CurrentProgrammeId != programme.Id
+                ? "Feedback already submitted"
+                : signOffLocked
+                    ? "Sign-off has started"
+                    : null;
+        }
+
+        return View(new InductionProgrammeDetailsViewModel
+        {
+            Programme = programme,
+            AssignedEmployees = employees.Where(x => x.CurrentProgrammeId == programme.Id).ToList(),
+            AvailableEmployees = employees.Where(x => x.CurrentProgrammeId != programme.Id).ToList()
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AssignEmployees(ProgrammeEmployeeSelectionInputModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+        var programme = await dbContext.InductionProgrammes
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
+        if (programme is null) return NotFound();
+
+        var selectedIds = (model.InductionCaseIds ?? []).Distinct().Take(500).ToArray();
+        if (selectedIds.Length == 0)
+        {
+            TempData["Error"] = "Select at least one employee induction to add.";
+            return RedirectToAction(nameof(Details), new { id = model.ProgrammeId });
+        }
+
+        var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
+        var inductions = await dbContext.InductionCases
+            .Include(x => x.ProgrammeAttendance)
+            .Include(x => x.EmployeeFeedback)
+            .Include(x => x.SignOffs)
+            .Where(x => selectedIds.Contains(x.Id))
+            .ToListAsync(HttpContext.RequestAborted);
+
+        var assigned = 0;
+        var unchanged = 0;
+        var protectedRecords = 0;
+        foreach (var induction in inductions)
+        {
+            if (induction.InductionProgrammeId == programme.Id)
+            {
+                unchanged++;
+                continue;
+            }
+
+            var signOffLocked = settings.LockChecklistWhenSignOffStarts && induction.SignOffs.Count > 0;
+            if (induction.EmployeeFeedback is not null || signOffLocked)
+            {
+                protectedRecords++;
+                continue;
+            }
+
+            if (induction.ProgrammeAttendance is not null)
+            {
+                dbContext.ProgrammeAttendances.Remove(induction.ProgrammeAttendance);
+                induction.ProgrammeAttendance = null;
+            }
+
+            induction.InductionProgrammeId = programme.Id;
+            assigned++;
+        }
+
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+        var missing = selectedIds.Length - inductions.Count;
+        TempData[assigned > 0 ? "Success" : "Error"] = assigned > 0
+            ? $"{assigned} employee induction{(assigned == 1 ? " was" : "s were")} added to {programme.Title}. Use Apply selected phases to update their checklists."
+            : "No employee inductions were added.";
+        if (protectedRecords + missing > 0)
+        {
+            TempData["Warning"] = $"{protectedRecords + missing} selected record{(protectedRecords + missing == 1 ? " was" : "s were")} skipped because it was protected or unavailable.";
+        }
+        else if (unchanged > 0)
+        {
+            TempData["Warning"] = $"{unchanged} selected record{(unchanged == 1 ? " was" : "s were")} already assigned to this programme.";
+        }
+
+        return RedirectToAction(nameof(Details), new { id = model.ProgrammeId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApplyChecklistPhases(ProgrammeEmployeeSelectionInputModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+        var programme = await dbContext.InductionProgrammes
+            .AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
+        if (programme is null) return NotFound();
+
+        var selectedIds = (model.InductionCaseIds ?? []).Distinct().Take(500).ToArray();
+        if (selectedIds.Length == 0)
+        {
+            TempData["Error"] = "Select at least one assigned employee induction.";
+            return RedirectToAction(nameof(Details), new { id = model.ProgrammeId });
+        }
+
+        var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
+        var inductions = await dbContext.InductionCases
+            .Include(x => x.Tasks)
+            .Include(x => x.SignOffs)
+            .Where(x => selectedIds.Contains(x.Id) && x.InductionProgrammeId == model.ProgrammeId)
+            .ToListAsync(HttpContext.RequestAborted);
+
+        var updated = 0;
+        var addedTasks = 0;
+        var includedTasks = 0;
+        var excludedTasks = 0;
+        var protectedRecords = 0;
+        foreach (var induction in inductions)
+        {
+            if (settings.LockChecklistWhenSignOffStarts && induction.SignOffs.Count > 0)
+            {
+                protectedRecords++;
+                continue;
+            }
+
+            var result = await workflowService.RefreshTasksFromProgrammeAsync(induction, HttpContext.RequestAborted);
+            await workflowService.RefreshStatusAsync(induction, HttpContext.RequestAborted);
+            addedTasks += result.Added;
+            includedTasks += result.Included;
+            excludedTasks += result.Excluded;
+            updated++;
+        }
+
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+        var unavailable = selectedIds.Length - inductions.Count;
+        TempData[updated > 0 ? "Success" : "Error"] = updated > 0
+            ? $"Programme phases applied to {updated} employee induction{(updated == 1 ? string.Empty : "s")}. Checklist changes: {addedTasks} added, {includedTasks} restored and {excludedTasks} excluded."
+            : "No employee induction checklists were updated.";
+        if (protectedRecords + unavailable > 0)
+        {
+            TempData["Warning"] = $"{protectedRecords + unavailable} selected record{(protectedRecords + unavailable == 1 ? " was" : "s were")} skipped because sign-off had started or it was no longer assigned to this programme.";
+        }
+
+        return RedirectToAction(nameof(Details), new { id = model.ProgrammeId });
     }
 
     [HttpGet]

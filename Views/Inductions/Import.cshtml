@@ -16,7 +16,7 @@
             <div>
                 <p class="eyebrow">Prepare the workbook</p>
                 <h2>Download the current template</h2>
-                <p>The drop-down values are refreshed from Administration each time you download. Position remains a short-text field.</p>
+                <p>The drop-down values are refreshed from Administration each time you download. New department and division text is allowed. Position remains a short-text field.</p>
                 <a class="btn btn-outline-primary" asp-action="DownloadImportTemplate">Download Excel template</a>
             </div>
         </section>
@@ -46,7 +46,7 @@
     </div>
     <div class="row g-3">
         <div class="col-md-4"><strong>Duplicate protection</strong><span>Matches on Employee AD ID or Employee Number are skipped.</span></div>
-        <div class="col-md-4"><strong>Controlled values</strong><span>Title, gender, department and division must be active in Administration.</span></div>
+        <div class="col-md-4"><strong>Controlled values</strong><span>Title and gender must be active in Administration. New departments and divisions are added automatically.</span></div>
         <div class="col-md-4"><strong>Identity and delivery</strong><span>AD IDs must use DOMAIN\username and every employee must have a valid email address.</span></div>
     </div>
 </section>
@@ -157,6 +157,7 @@
                 addSummaryMetric('Imported', result.importedCount ?? 0, 'is-imported');
                 addSummaryMetric('Duplicates skipped', result.duplicateCount ?? 0, 'is-duplicate');
                 addSummaryMetric('Failed', result.failedCount ?? 0, 'is-failed');
+                addSummaryMetric('Administration updates', (result.masterDataAddedCount ?? 0) + (result.masterDataReactivatedCount ?? 0), 'is-master-data');
 
                 if (Array.isArray(result.rows) && result.rows.length > 0) {
                     rows.hidden = false;
