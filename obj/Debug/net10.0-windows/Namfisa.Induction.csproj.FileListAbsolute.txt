@@ -413,10 +413,7 @@ D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\rjsmcshtml.dswa.cache
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\scopedcss\Views\Shared\_Layout.cshtml.rz.scp.css
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\scopedcss\bundle\Namfisa.Induction.styles.css
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\scopedcss\projectbundle\Namfisa.Induction.bundle.scp.css
-D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\iien4pboi5-{0}-5dqp9op3lb-5dqp9op3lb.gz
-D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\pl717qwlf9-{0}-4x2iopezfs-4x2iopezfs.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\quyo9amuko-{0}-61n19gt1b8-61n19gt1b8.gz
-D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\bp3yi4ulkg-{0}-gmun9tjqlh-gmun9tjqlh.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\dl9bv7cfaq-{0}-xtxxf3hu2r-xtxxf3hu2r.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\zqjbeu7fpe-{0}-bqjiyaj88i-bqjiyaj88i.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\hctrs8kb5b-{0}-c2jlpeoesf-c2jlpeoesf.gz
@@ -488,7 +485,6 @@ D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\staticwebassets.build
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\staticwebassets.development.json
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\staticwebassets.build.endpoints.json
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\swae.build.ex.cache
-D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\staticwebassets.upToDateCheck.txt
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\Namfisa..95CACCBC.Up2Date
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\Namfisa.Induction.dll
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\refint\Namfisa.Induction.dll
@@ -497,3 +493,6 @@ D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\Namfisa.Induction.gen
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\ref\Namfisa.Induction.dll
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\dlgfvcjd3k-{0}-l0u4sg0igs-l0u4sg0igs.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\36fhv0pbsy-{0}-up8klt7cvo-up8klt7cvo.gz
+D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\iien4pboi5-{0}-91wz5g16sr-91wz5g16sr.gz
+D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\pl717qwlf9-{0}-n587u5ume8-n587u5ume8.gz
+D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\bp3yi4ulkg-{0}-sxvn77lwrw-sxvn77lwrw.gz

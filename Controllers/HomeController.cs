@@ -25,7 +25,7 @@ public class HomeController(
                 x.EmployeeUsername == username
                 || x.LineManagerUsername == username
                 || x.HrBusinessPartnerUsername == username
-                || x.Tasks.Any(t => t.AssignedToUsername == username));
+                || x.Tasks.Any(t => !t.ExcludedByProgramme && t.AssignedToUsername == username));
         }
 
         var today = DateTime.Today;
@@ -34,7 +34,7 @@ public class HomeController(
         var openTasks = dbContext.InductionTasks
             .AsNoTracking()
             .Include(x => x.InductionCase)
-            .Where(x => x.Status == InductionTaskStatus.NotStarted);
+            .Where(x => !x.ExcludedByProgramme && x.Status == InductionTaskStatus.NotStarted);
 
         if (!isHr)
         {

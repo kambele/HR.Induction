@@ -5,7 +5,8 @@
     var induction = Model.Induction;
     var currentUsername = AccessService.CurrentUsername(User);
     var locked = Model.LockChecklistWhenSignOffStarts && induction.SignOffs.Count > 0;
-    var mandatoryComplete = induction.Tasks.Where(x => x.IsMandatory)
+    var checklistTasks = induction.Tasks.Where(x => !x.ExcludedByProgramme).ToList();
+    var mandatoryComplete = checklistTasks.Where(x => x.IsMandatory)
         .All(x => x.Status is InductionTaskStatus.Completed or InductionTaskStatus.NotApplicable);
     var checklistReadyForSignOff = !Model.RequireMandatoryTasksBeforeSignOff || mandatoryComplete;
     string RatingText(int? rating) => rating switch { 1 => "Poor", 2 => "Fair", 3 => "Good", 4 => "Very good", 5 => "Excellent", _ => "Not recorded" };
@@ -165,12 +166,25 @@
         <div>
             <p class="eyebrow">Plan and conduct</p>
             <h2>Induction checklist</h2>
+            @if (induction.InductionProgramme is not null)
+            {
+                <p class="section-supporting-copy">Programme phases: @string.Join(", ", Model.ProgrammeChecklistPhases.Select(DisplayText.For))</p>
+            }
         </div>
-        <span>@Model.CompletedTaskCount / @Model.TotalTaskCount complete</span>
+        <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+            <span>@Model.CompletedTaskCount / @Model.TotalTaskCount complete</span>
+            @if (Model.CanManage && induction.InductionProgramme is not null)
+            {
+                <form asp-action="RefreshChecklist" method="post">
+                    <input type="hidden" name="id" value="@induction.Id" />
+                    <button class="btn btn-sm btn-outline-primary" type="submit" disabled="@(locked ? "disabled" : null)" title="@(locked ? "Checklist refresh is locked after sign-off starts." : "Apply the checklist phases configured on the assigned programme.")">Refresh checklist</button>
+                </form>
+            }
+        </div>
     </div>
 
     <div class="phase-stack">
-        @foreach (var phaseGroup in induction.Tasks.OrderBy(x => x.SortOrder).GroupBy(x => x.Phase))
+        @foreach (var phaseGroup in checklistTasks.OrderBy(x => x.SortOrder).GroupBy(x => x.Phase))
         {
             var phaseCompleted = phaseGroup.Count(x => x.Status != InductionTaskStatus.NotStarted);
             <article class="content-card phase-card">

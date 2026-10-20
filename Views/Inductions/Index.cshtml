@@ -68,8 +68,9 @@
                 <tbody>
                 @foreach (var induction in Model)
                 {
-                    var completed = induction.Tasks.Count(x => x.Status != InductionTaskStatus.NotStarted);
-                    var progress = induction.Tasks.Count == 0 ? 0 : (int)Math.Round(completed * 100d / induction.Tasks.Count);
+                    var applicableTasks = induction.Tasks.Where(x => !x.ExcludedByProgramme).ToList();
+                    var completed = applicableTasks.Count(x => x.Status != InductionTaskStatus.NotStarted);
+                    var progress = applicableTasks.Count == 0 ? 0 : (int)Math.Round(completed * 100d / applicableTasks.Count);
                     <tr>
                         <td>
                             <strong>@induction.EmployeeName</strong>

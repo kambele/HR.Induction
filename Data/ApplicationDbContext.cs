@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<MasterDataItem> MasterDataItems => Set<MasterDataItem>();
     public DbSet<WorkflowConfiguration> WorkflowConfigurations => Set<WorkflowConfiguration>();
     public DbSet<InductionProgramme> InductionProgrammes => Set<InductionProgramme>();
+    public DbSet<InductionProgrammeChecklistPhase> InductionProgrammeChecklistPhases => Set<InductionProgrammeChecklistPhase>();
     public DbSet<InductionProgrammeSession> InductionProgrammeSessions => Set<InductionProgrammeSession>();
     public DbSet<PresentationRating> PresentationRatings => Set<PresentationRating>();
     public DbSet<ProgrammeAttendance> ProgrammeAttendances => Set<ProgrammeAttendance>();
@@ -55,6 +56,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .WithOne(x => x.InductionProgramme)
             .HasForeignKey(x => x.InductionProgrammeId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<InductionProgramme>()
+            .HasMany(x => x.ChecklistPhases)
+            .WithOne(x => x.InductionProgramme)
+            .HasForeignKey(x => x.InductionProgrammeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<InductionProgrammeChecklistPhase>()
+            .HasKey(x => new { x.InductionProgrammeId, x.Phase });
 
         modelBuilder.Entity<InductionProgramme>()
             .HasMany(x => x.Attendances)

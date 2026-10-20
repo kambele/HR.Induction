@@ -179,6 +179,7 @@ public class InductionTask
 
     public DateTime DueDate { get; set; }
     public bool IsMandatory { get; set; }
+    public bool ExcludedByProgramme { get; set; }
     public int SortOrder { get; set; }
     public InductionTaskStatus Status { get; set; } = InductionTaskStatus.NotStarted;
 
@@ -285,8 +286,16 @@ public class InductionProgramme
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public ICollection<InductionProgrammeSession> Sessions { get; set; } = [];
+    public ICollection<InductionProgrammeChecklistPhase> ChecklistPhases { get; set; } = [];
     public ICollection<InductionCase> Participants { get; set; } = [];
     public ICollection<ProgrammeAttendance> Attendances { get; set; } = [];
+}
+
+public class InductionProgrammeChecklistPhase
+{
+    public int InductionProgrammeId { get; set; }
+    public InductionProgramme InductionProgramme { get; set; } = null!;
+    public InductionPhase Phase { get; set; }
 }
 
 public class InductionProgrammeSession

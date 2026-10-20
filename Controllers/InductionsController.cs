@@ -37,7 +37,7 @@ public class InductionsController(
                 x.EmployeeUsername == username
                 || x.LineManagerUsername == username
                 || x.HrBusinessPartnerUsername == username
-                || x.Tasks.Any(t => t.AssignedToUsername == username));
+                || x.Tasks.Any(t => !t.ExcludedByProgramme && t.AssignedToUsername == username));
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -346,12 +346,15 @@ public class InductionsController(
             .Include(x => x.ProgrammeAttendance)
             .Include(x => x.InductionProgramme)
                 .ThenInclude(x => x!.Sessions)
+            .Include(x => x.InductionProgramme)
+                .ThenInclude(x => x!.ChecklistPhases)
             .SingleOrDefaultAsync(x => x.Id == id);
 
         if (inductionCase is null) return NotFound();
         if (!accessService.CanView(User, inductionCase)) return Forbid();
 
-        var completed = inductionCase.Tasks.Count(x =>
+        var applicableTasks = inductionCase.Tasks.Where(x => !x.ExcludedByProgramme).ToList();
+        var completed = applicableTasks.Count(x =>
             x.Status is InductionTaskStatus.Completed or InductionTaskStatus.NotApplicable);
         var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
 
@@ -359,7 +362,7 @@ public class InductionsController(
         {
             Induction = inductionCase,
             CompletedTaskCount = completed,
-            TotalTaskCount = inductionCase.Tasks.Count,
+            TotalTaskCount = applicableTasks.Count,
             CanManage = accessService.IsHr(User),
             SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,
             CanSubmitFeedback = inductionCase.EmployeeFeedback is null
@@ -376,8 +379,44 @@ public class InductionsController(
                     || inductionCase.SignOffs.Any(x => x.Role == SignOffRole.LineManager)),
             LockChecklistWhenSignOffStarts = settings.LockChecklistWhenSignOffStarts,
             RequireMandatoryTasksBeforeSignOff = settings.RequireMandatoryTasksBeforeSignOff,
-            RequireEmployeeFeedbackBeforeSignOff = settings.RequireEmployeeFeedbackBeforeSignOff
+            RequireEmployeeFeedbackBeforeSignOff = settings.RequireEmployeeFeedbackBeforeSignOff,
+            ProgrammeChecklistPhases = inductionCase.InductionProgramme?.ChecklistPhases.Count > 0
+                ? inductionCase.InductionProgramme.ChecklistPhases.Select(x => x.Phase).OrderBy(x => x).ToList()
+                : Enum.GetValues<InductionPhase>()
         });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RefreshChecklist(int id)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+
+        var inductionCase = await dbContext.InductionCases
+            .AsSplitQuery()
+            .Include(x => x.Tasks)
+            .Include(x => x.SignOffs)
+            .SingleOrDefaultAsync(x => x.Id == id, HttpContext.RequestAborted);
+        if (inductionCase is null) return NotFound();
+        if (!inductionCase.InductionProgrammeId.HasValue)
+        {
+            TempData["Error"] = "Assign an induction programme before refreshing the checklist.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
+        if (settings.LockChecklistWhenSignOffStarts && inductionCase.SignOffs.Count > 0)
+        {
+            TempData["Error"] = "The checklist cannot be refreshed because the sign-off process has started.";
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var result = await workflow.RefreshTasksFromProgrammeAsync(inductionCase, HttpContext.RequestAborted);
+        await workflow.RefreshStatusAsync(inductionCase, HttpContext.RequestAborted);
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+
+        TempData["Success"] = $"Checklist refreshed: {result.ApplicableTasks} applicable task{(result.ApplicableTasks == 1 ? string.Empty : "s")}, {result.Added} added, {result.Included} restored and {result.Excluded} excluded.";
+        return RedirectToAction(nameof(Details), new { id });
     }
 
     [HttpGet]
@@ -553,6 +592,11 @@ public class InductionsController(
             .SingleOrDefaultAsync(x => x.Id == taskId);
 
         if (task is null) return NotFound();
+        if (task.ExcludedByProgramme)
+        {
+            TempData["Error"] = "This checklist item is not applicable to the assigned induction programme.";
+            return RedirectToAction(nameof(Details), new { id = task.InductionCaseId });
+        }
         if (!accessService.CanComplete(User, task)) return Forbid();
 
         var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
@@ -709,7 +753,7 @@ public class InductionsController(
 
         var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
         var mandatoryComplete = inductionCase.Tasks
-            .Where(x => x.IsMandatory)
+            .Where(x => !x.ExcludedByProgramme && x.IsMandatory)
             .All(x => x.Status is InductionTaskStatus.Completed or InductionTaskStatus.NotApplicable);
 
         if (settings.RequireMandatoryTasksBeforeSignOff && !mandatoryComplete)

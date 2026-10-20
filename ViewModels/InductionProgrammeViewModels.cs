@@ -23,6 +23,10 @@ public class InductionProgrammeEditorViewModel
     [Required]
     public InductionProgrammeStatus Status { get; set; } = InductionProgrammeStatus.Draft;
 
+    [Display(Name = "Applicable checklist phases")]
+    [MinLength(1, ErrorMessage = "Select at least one checklist phase.")]
+    public List<InductionPhase> ApplicableChecklistPhases { get; set; } = [];
+
     [Required, MinLength(1, ErrorMessage = "Add at least one divisional presentation.")]
     public List<InductionProgrammeSessionInputModel> Sessions { get; set; } = [new()];
 

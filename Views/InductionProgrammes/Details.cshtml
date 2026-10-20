@@ -10,4 +10,23 @@
 
 <section class="row g-3 mb-4"><div class="col-6 col-xl-3"><div class="metric-card"><span class="metric-label">Presentations</span><strong>@Model.Sessions.Count</strong><span class="metric-note">Scheduled divisions</span></div></div><div class="col-6 col-xl-3"><div class="metric-card metric-gold"><span class="metric-label">Employees</span><strong>@Model.Participants.Count</strong><span class="metric-note">Assigned records</span></div></div><div class="col-6 col-xl-3"><div class="metric-card metric-success"><span class="metric-label">Responses</span><strong>@responses</strong><span class="metric-note">Programme evaluations</span></div></div><div class="col-6 col-xl-3"><div class="metric-card"><span class="metric-label">Response rate</span><strong>@(Model.Participants.Count == 0 ? 0 : Math.Round(responses * 100d / Model.Participants.Count))%</strong><span class="metric-note">Of assigned employees</span></div></div></section>
 
+@{
+    var checklistPhases = Model.ChecklistPhases.Count == 0
+        ? Enum.GetValues<InductionPhase>()
+        : Model.ChecklistPhases.Select(x => x.Phase).OrderBy(x => x).ToArray();
+}
+<section class="content-card programme-phase-summary mb-4">
+    <div>
+        <p class="eyebrow mb-1">Employee checklist</p>
+        <h2>Applicable phases</h2>
+        <p>Employees assigned to this programme receive these phases when HRBP refreshes their checklist.</p>
+    </div>
+    <div class="programme-phase-badges">
+        @foreach (var phase in checklistPhases)
+        {
+            <span>@DisplayText.For(phase)</span>
+        }
+    </div>
+</section>
+
 <div class="row g-4"><section class="col-xl-7"><div class="content-card p-0 overflow-hidden h-100"><div class="card-heading p-4 mb-0"><div><h2>Programme schedule</h2><p>Divisional presenters and time slots.</p></div></div><div class="table-responsive"><table class="table programme-schedule-table mb-0"><thead><tr><th>Time</th><th>Division</th><th>Presenter</th></tr></thead><tbody>@foreach(var session in Model.Sessions.OrderBy(x=>x.SortOrder)){<tr><td><strong>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</strong></td><td>@session.Division</td><td>@session.PresenterName<span class="subtext">@session.PresenterUsername</span></td></tr>}</tbody></table></div></div></section><section class="col-xl-5"><div class="content-card h-100"><div class="card-heading"><div><h2>Assigned employees</h2><p>Edit an induction record to assign or change its programme.</p></div></div>@if(Model.Participants.Count==0){<div class="empty-state">No employees assigned.</div>}else{<div class="programme-participant-list">@foreach(var participant in Model.Participants.OrderBy(x=>x.EmployeeName)){<a asp-controller="Inductions" asp-action="Details" asp-route-id="@participant.Id"><span><strong>@participant.EmployeeName</strong><small>@participant.Department</small></span><span>@(participant.EmployeeFeedback?.OverallProgrammeRating is null ? "Awaiting feedback" : $"{participant.EmployeeFeedback.OverallProgrammeRating}/5")</span></a>}</div>}</div></section></div>

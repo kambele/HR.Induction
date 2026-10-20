@@ -96,6 +96,7 @@ public class InductionDetailsViewModel
     public bool RequireMandatoryTasksBeforeSignOff { get; set; }
     public bool RequireEmployeeFeedbackBeforeSignOff { get; set; }
     public bool SmtpConfigured { get; set; }
+    public IReadOnlyList<InductionPhase> ProgrammeChecklistPhases { get; set; } = [];
 }
 
 public class EmployeeFeedbackInputModel

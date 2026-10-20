@@ -53,12 +53,13 @@ public sealed class InductionReportService(IWebHostEnvironment environment) : II
                 : "Not sent")
         ]);
 
-        var completed = inductionCase.Tasks.Count(x =>
+        var applicableTasks = inductionCase.Tasks.Where(x => !x.ExcludedByProgramme).ToList();
+        var completed = applicableTasks.Count(x =>
             x.Status is InductionTaskStatus.Completed or InductionTaskStatus.NotApplicable);
-        var percentage = inductionCase.Tasks.Count == 0
+        var percentage = applicableTasks.Count == 0
             ? 0
-            : (int)Math.Round(completed * 100d / inductionCase.Tasks.Count);
-        report.AddProgress(completed, inductionCase.Tasks.Count, percentage);
+            : (int)Math.Round(completed * 100d / applicableTasks.Count);
+        report.AddProgress(completed, applicableTasks.Count, percentage);
 
         if (inductionCase.InductionProgramme is not null)
         {
@@ -72,7 +73,7 @@ public sealed class InductionReportService(IWebHostEnvironment environment) : II
         }
 
         report.AddSection("INDUCTION CHECKLIST");
-        foreach (var phaseGroup in inductionCase.Tasks.OrderBy(x => x.SortOrder).GroupBy(x => x.Phase))
+        foreach (var phaseGroup in applicableTasks.OrderBy(x => x.SortOrder).GroupBy(x => x.Phase))
         {
             report.AddSubheading(DisplayText.For(phaseGroup.Key));
             foreach (var task in phaseGroup)
@@ -168,6 +169,9 @@ public sealed class InductionReportService(IWebHostEnvironment environment) : II
         var responseRate = programme.Participants.Count == 0
             ? 0
             : (int)Math.Round(responses.Count * 100d / programme.Participants.Count);
+        var checklistPhases = programme.ChecklistPhases.Count == 0
+            ? Enum.GetValues<InductionPhase>()
+            : programme.ChecklistPhases.Select(x => x.Phase).OrderBy(x => x).ToArray();
 
         report.AddDocumentTitle("CORPORATE INDUCTION PROGRAMME REPORT", programme.Title);
         report.AddSection("PROGRAMME DETAILS");
@@ -176,6 +180,7 @@ public sealed class InductionReportService(IWebHostEnvironment environment) : II
             ("Venue", programme.Venue ?? "Not specified"),
             ("Status", programme.Status.ToString()),
             ("Divisional presentations", programme.Sessions.Count.ToString()),
+            ("Checklist phases", string.Join(", ", checklistPhases.Select(DisplayText.For))),
             ("Employees assigned", programme.Participants.Count.ToString()),
             ("Feedback responses", $"{responses.Count} ({responseRate}%)")
         ]);

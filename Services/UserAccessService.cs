@@ -49,7 +49,7 @@ public class UserAccessService(IConfiguration configuration, IWebHostEnvironment
         return Matches(current, inductionCase.EmployeeUsername)
             || Matches(current, inductionCase.LineManagerUsername)
             || Matches(current, inductionCase.HrBusinessPartnerUsername)
-            || inductionCase.Tasks.Any(x => Matches(current, x.AssignedToUsername));
+            || inductionCase.Tasks.Any(x => !x.ExcludedByProgramme && Matches(current, x.AssignedToUsername));
     }
 
     public bool CanComplete(ClaimsPrincipal user, InductionTask task) =>

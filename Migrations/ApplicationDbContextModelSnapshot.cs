@@ -297,6 +297,19 @@ namespace Namfisa.Induction.Migrations
                     b.ToTable("InductionProgrammes");
                 });
 
+            modelBuilder.Entity("Namfisa.Induction.Models.InductionProgrammeChecklistPhase", b =>
+                {
+                    b.Property<int>("InductionProgrammeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("int");
+
+                    b.HasKey("InductionProgrammeId", "Phase");
+
+                    b.ToTable("InductionProgrammeChecklistPhases");
+                });
+
             modelBuilder.Entity("Namfisa.Induction.Models.InductionProgrammeSession", b =>
                 {
                     b.Property<int>("Id")
@@ -363,6 +376,9 @@ namespace Namfisa.Induction.Migrations
 
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("ExcludedByProgramme")
+                        .HasColumnType("bit");
 
                     b.Property<int>("InductionCaseId")
                         .HasColumnType("int");
@@ -772,6 +788,17 @@ namespace Namfisa.Induction.Migrations
                     b.Navigation("InductionProgramme");
                 });
 
+            modelBuilder.Entity("Namfisa.Induction.Models.InductionProgrammeChecklistPhase", b =>
+                {
+                    b.HasOne("Namfisa.Induction.Models.InductionProgramme", "InductionProgramme")
+                        .WithMany("ChecklistPhases")
+                        .HasForeignKey("InductionProgrammeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InductionProgramme");
+                });
+
             modelBuilder.Entity("Namfisa.Induction.Models.InductionProgrammeSession", b =>
                 {
                     b.HasOne("Namfisa.Induction.Models.InductionProgramme", "InductionProgramme")
@@ -875,6 +902,8 @@ namespace Namfisa.Induction.Migrations
             modelBuilder.Entity("Namfisa.Induction.Models.InductionProgramme", b =>
                 {
                     b.Navigation("Attendances");
+
+                    b.Navigation("ChecklistPhases");
 
                     b.Navigation("Participants");
 

@@ -21,6 +21,25 @@
         <div class="col-lg-6"><label asp-for="Notes" class="form-label"></label><input asp-for="Notes" class="form-control" placeholder="Optional programme notes" /></div>
     </div>
 
+    <section class="programme-phase-editor mb-4" aria-labelledby="checklistPhaseHeading">
+        <div>
+            <p class="eyebrow mb-1">Employee checklist</p>
+            <h2 id="checklistPhaseHeading">Applicable checklist phases</h2>
+            <p>Select the phases employees assigned to this programme must complete. Existing employee records change only after HRBP clicks <strong>Refresh checklist</strong> on that employee's induction overview.</p>
+        </div>
+        <div class="programme-phase-grid">
+            @foreach (var phase in Enum.GetValues<InductionPhase>())
+            {
+                var phaseId = $"checklist-phase-{phase}";
+                <label class="programme-phase-option" for="@phaseId">
+                    <input class="form-check-input" id="@phaseId" name="ApplicableChecklistPhases" type="checkbox" value="@phase" checked="@(Model.ApplicableChecklistPhases.Contains(phase) ? "checked" : null)" />
+                    <span><strong>@DisplayText.For(phase)</strong><small>Include this phase in refreshed employee checklists</small></span>
+                </label>
+            }
+        </div>
+        <span asp-validation-for="ApplicableChecklistPhases" class="text-danger"></span>
+    </section>
+
     <div class="card-heading"><div><h2>Divisional presentation schedule</h2><p>One presentation per division. Time slots cannot overlap.</p></div>@if (!Model.ScheduleLocked){<button class="btn btn-sm btn-outline-primary" id="addProgrammeSession" type="button">Add presentation</button>}</div>
     @if (Model.ScheduleLocked)
     {

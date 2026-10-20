@@ -43,6 +43,7 @@ public class InductionProgrammesController(
         var model = new InductionProgrammeEditorViewModel
         {
             ProgrammeDate = DateTime.Today,
+            ApplicableChecklistPhases = Enum.GetValues<InductionPhase>().ToList(),
             Sessions = [new InductionProgrammeSessionInputModel
             {
                 StartTime = new TimeSpan(8, 30, 0),
@@ -86,6 +87,7 @@ public class InductionProgrammesController(
         var programme = await dbContext.InductionProgrammes
             .AsNoTracking()
             .Include(x => x.Sessions)
+            .Include(x => x.ChecklistPhases)
             .SingleOrDefaultAsync(x => x.Id == id, HttpContext.RequestAborted);
         if (programme is null) return NotFound();
 
@@ -97,6 +99,9 @@ public class InductionProgrammesController(
             Venue = programme.Venue,
             Notes = programme.Notes,
             Status = programme.Status,
+            ApplicableChecklistPhases = programme.ChecklistPhases.Count == 0
+                ? Enum.GetValues<InductionPhase>().ToList()
+                : programme.ChecklistPhases.Select(x => x.Phase).OrderBy(x => x).ToList(),
             ScheduleLocked = await ProgrammeHasResponsesAsync(programme.Id),
             Sessions = programme.Sessions
                 .OrderBy(x => x.SortOrder)
@@ -121,6 +126,7 @@ public class InductionProgrammesController(
         if (!accessService.IsHr(User)) return Forbid();
         var programme = await dbContext.InductionProgrammes
             .Include(x => x.Sessions)
+            .Include(x => x.ChecklistPhases)
             .SingleOrDefaultAsync(x => x.Id == model.Id, HttpContext.RequestAborted);
         if (programme is null) return NotFound();
 
@@ -206,6 +212,7 @@ public class InductionProgrammesController(
         .AsSplitQuery()
         .Include(x => x.Sessions)
             .ThenInclude(x => x.Ratings)
+        .Include(x => x.ChecklistPhases)
         .Include(x => x.Participants)
             .ThenInclude(x => x.EmployeeFeedback)
                 .ThenInclude(x => x!.PresentationRatings)
@@ -216,6 +223,16 @@ public class InductionProgrammesController(
         model.Title = model.Title?.Trim() ?? string.Empty;
         model.Venue = string.IsNullOrWhiteSpace(model.Venue) ? null : model.Venue.Trim();
         model.Notes = string.IsNullOrWhiteSpace(model.Notes) ? null : model.Notes.Trim();
+        var validPhases = Enum.GetValues<InductionPhase>().ToHashSet();
+        model.ApplicableChecklistPhases = (model.ApplicableChecklistPhases ?? [])
+            .Where(validPhases.Contains)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+        if (model.ApplicableChecklistPhases.Count == 0)
+        {
+            ModelState.AddModelError(nameof(model.ApplicableChecklistPhases), "Select at least one checklist phase.");
+        }
         if (!validateSessions) return;
 
         var activeDivisions = await dbContext.MasterDataItems.AsNoTracking()
@@ -271,6 +288,17 @@ public class InductionProgrammesController(
         programme.Status = model.Status;
         programme.UpdatedBy = username;
         programme.UpdatedAtUtc = DateTime.UtcNow;
+
+        var selectedPhases = model.ApplicableChecklistPhases.ToHashSet();
+        foreach (var existingPhase in programme.ChecklistPhases.Where(x => !selectedPhases.Contains(x.Phase)).ToList())
+        {
+            programme.ChecklistPhases.Remove(existingPhase);
+        }
+        var existingPhases = programme.ChecklistPhases.Select(x => x.Phase).ToHashSet();
+        foreach (var phase in selectedPhases.Where(x => !existingPhases.Contains(x)).OrderBy(x => x))
+        {
+            programme.ChecklistPhases.Add(new InductionProgrammeChecklistPhase { Phase = phase });
+        }
 
         if (!updateSessions) return;
         programme.Sessions.Clear();
