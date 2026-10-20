@@ -19,7 +19,21 @@
             tooltip: { trigger: 'axis', formatter: params => `${params[0].name}<br>${params[0].value.toFixed(2)} / 5` },
             xAxis: { type: 'category', data: divisionData.map(item => item.division), axisLabel: { interval: 0, rotate: 28, color: '#66736c' }, axisLine: { lineStyle: { color: '#dce4dd' } } },
             yAxis: { type: 'value', min: 0, max: 5, interval: 1, axisLabel: { color: '#66736c' }, splitLine: { lineStyle: { color: '#edf1ed' } } },
-            series: [{ type: 'bar', barMaxWidth: 42, data: divisionData.map(item => ({ value: item.average, itemStyle: { borderRadius: [4, 4, 0, 0] } })), label: { show: true, position: 'top', formatter: value => Number(value.value).toFixed(1), color: '#314037', fontWeight: 700 }]
+            series: [{
+                type: 'bar',
+                barMaxWidth: 42,
+                data: divisionData.map(item => ({
+                    value: item.average,
+                    itemStyle: { borderRadius: [4, 4, 0, 0] }
+                })),
+                label: {
+                    show: true,
+                    position: 'top',
+                    formatter: value => Number(value.value).toFixed(1),
+                    color: '#314037',
+                    fontWeight: 700
+                }
+            }]
         });
     } else if (divisionElement) empty(divisionElement, 'No presentation ratings have been submitted.');
 
