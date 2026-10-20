@@ -56,14 +56,32 @@ public class PresentersController(
     {
         if (!accessService.IsHr(User)) return Forbid();
 
-        var session = await dbContext.InductionProgrammeSessions
-            .SingleOrDefaultAsync(
-                x => x.Id == model.SessionId && x.InductionProgrammeId == model.ProgrammeId,
-                HttpContext.RequestAborted);
+        var programme = await dbContext.InductionProgrammes
+            .Include(x => x.Sessions)
+            .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
+        if (programme is null) return NotFound();
+
+        var session = programme.Sessions.SingleOrDefault(x => x.Id == model.SessionId);
         if (session is null) return NotFound();
 
+        var username = accessService.CurrentUsername(User);
         session.CompletedAtUtc = model.IsCompleted ? DateTime.UtcNow : null;
-        session.CompletedBy = model.IsCompleted ? accessService.CurrentUsername(User) : null;
+        session.CompletedBy = model.IsCompleted ? username : null;
+        if (programme.Status != InductionProgrammeStatus.Cancelled)
+        {
+            var allPresentationsComplete = programme.Sessions.Count > 0
+                && programme.Sessions.All(x => x.CompletedAtUtc.HasValue);
+            if (allPresentationsComplete)
+            {
+                programme.Status = InductionProgrammeStatus.Completed;
+            }
+            else if (programme.Status == InductionProgrammeStatus.Completed)
+            {
+                programme.Status = InductionProgrammeStatus.Scheduled;
+            }
+            programme.UpdatedBy = username;
+            programme.UpdatedAtUtc = DateTime.UtcNow;
+        }
         await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
 
         TempData["Success"] = model.IsCompleted
@@ -191,6 +209,108 @@ public class PresentersController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendFeedbackInvitations(SendFeedbackInvitationsViewModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+
+        var programme = await dbContext.InductionProgrammes
+            .Include(x => x.Sessions)
+            .Include(x => x.Participants)
+                .ThenInclude(x => x.ProgrammeAttendance)
+            .Include(x => x.Participants)
+                .ThenInclude(x => x.EmployeeFeedback)
+            .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
+        if (programme is null) return NotFound();
+
+        if (!InductionProgrammeRules.IsCompleted(programme))
+        {
+            TempData["Error"] = "Feedback invitations become available only after the programme is completed.";
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
+        if (!ModelState.IsValid || model.InductionCaseIds.Length == 0)
+        {
+            TempData["Error"] = "Select at least one eligible employee to invite for feedback.";
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
+        if (!emailService.ConfigurationStatus.IsConfigured)
+        {
+            TempData["Error"] = emailService.ConfigurationStatus.Summary;
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
+
+        var selectedIds = model.InductionCaseIds.Distinct().Take(200).ToHashSet();
+        var employees = programme.Participants
+            .Where(x => selectedIds.Contains(x.Id))
+            .OrderBy(x => x.EmployeeName)
+            .ToList();
+        var sentBy = accessService.CurrentUsername(User);
+        var sentCount = 0;
+        var failures = new List<string>();
+
+        foreach (var employee in employees)
+        {
+            if (employee.ProgrammeAttendance?.Status != ProgrammeAttendanceStatus.Present)
+            {
+                failures.Add($"{employee.EmployeeName}: attendance is not marked present.");
+                continue;
+            }
+            if (employee.EmployeeFeedback is not null)
+            {
+                failures.Add($"{employee.EmployeeName}: feedback has already been submitted.");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(employee.EmployeeEmail))
+            {
+                failures.Add($"{employee.EmployeeName}: email address is missing.");
+                continue;
+            }
+
+            var feedbackUrl = BuildFeedbackUrl(employee.AccessToken);
+            if (string.IsNullOrWhiteSpace(feedbackUrl))
+            {
+                failures.Add($"{employee.EmployeeName}: feedback link could not be created.");
+                continue;
+            }
+
+            try
+            {
+                await emailService.SendFeedbackInvitationAsync(
+                    employee,
+                    programme,
+                    feedbackUrl,
+                    HttpContext.RequestAborted);
+
+                var attendance = GetOrCreateAttendance(programme, employee);
+                attendance.FeedbackInvitationSentAtUtc = DateTime.UtcNow;
+                attendance.FeedbackInvitationSentBy = sentBy;
+                attendance.FeedbackInvitationSentTo = employee.EmployeeEmail.Trim();
+                await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+                sentCount++;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception,
+                    "Failed to send programme {ProgrammeId} feedback invitation to induction {InductionId}.",
+                    programme.Id,
+                    employee.Id);
+                failures.Add($"{employee.EmployeeName}: delivery failed.");
+            }
+        }
+
+        if (sentCount > 0)
+        {
+            TempData["Success"] = $"Sent {sentCount} feedback invitation{(sentCount == 1 ? string.Empty : "s")}.";
+        }
+        if (failures.Count > 0)
+        {
+            TempData["Error"] = $"{failures.Count} feedback invitation{(failures.Count == 1 ? string.Empty : "s")} could not be sent. {string.Join(" ", failures.Take(3))}";
+        }
+
+        return RedirectToAction(nameof(Programme), new { id = programme.Id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> SendAttendanceInvitations(SendAttendanceInvitationsViewModel model)
     {
         var programme = await dbContext.InductionProgrammes
@@ -200,6 +320,12 @@ public class PresentersController(
             .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
         if (programme is null) return NotFound();
         if (!accessService.CanManageProgrammeAttendance(User, programme)) return Forbid();
+
+        if (!InductionProgrammeRules.CanSendAttendanceInvitations(programme, DateTime.Now))
+        {
+            TempData["Error"] = "Attendance invitations can be sent only before the programme starts.";
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
 
         if (!ModelState.IsValid || model.InductionCaseIds.Length == 0)
         {
@@ -281,6 +407,8 @@ public class PresentersController(
         .Include(x => x.Participants)
             .ThenInclude(x => x.ProgrammeAttendance)
         .Include(x => x.Participants)
+            .ThenInclude(x => x.EmployeeFeedback)
+        .Include(x => x.Participants)
             .ThenInclude(x => x.Tasks)
         .Include(x => x.Participants)
             .ThenInclude(x => x.SignOffs)
@@ -289,6 +417,9 @@ public class PresentersController(
     private async Task<PresenterProgrammeViewModel> BuildProgrammeModelAsync(InductionProgramme programme)
     {
         var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
+        var programmeStartsAt = InductionProgrammeRules.StartsAt(programme);
+        var programmeCompleted = InductionProgrammeRules.IsCompleted(programme);
+        var isHr = accessService.IsHr(User);
         var applicablePhases = programme.ChecklistPhases.Count == 0
             ? Enum.GetValues<InductionPhase>().ToHashSet()
             : programme.ChecklistPhases.Select(x => x.Phase).ToHashSet();
@@ -301,8 +432,12 @@ public class PresentersController(
         return new PresenterProgrammeViewModel
         {
             Programme = programme,
-            CanManageChecklist = accessService.IsHr(User),
+            CanManageChecklist = isHr,
             LockChecklistWhenSignOffStarts = settings.LockChecklistWhenSignOffStarts,
+            CanSendAttendanceInvitations = InductionProgrammeRules.CanSendAttendanceInvitations(programme, DateTime.Now),
+            CanSendFeedbackInvitations = isHr && programmeCompleted,
+            ProgrammeCompleted = programmeCompleted,
+            ProgrammeStartsAt = programmeStartsAt,
             SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,
             SmtpSummary = emailService.ConfigurationStatus.Summary,
             Attendees = programme.Participants
@@ -314,7 +449,9 @@ public class PresentersController(
                     ConfirmedAtUtc = induction.ProgrammeAttendance?.ConfirmedAtUtc,
                     ConfirmedBy = induction.ProgrammeAttendance?.ConfirmedBy,
                     ConfirmationSource = induction.ProgrammeAttendance?.ConfirmationSource,
-                    InvitationSentAtUtc = induction.ProgrammeAttendance?.InvitationSentAtUtc
+                    InvitationSentAtUtc = induction.ProgrammeAttendance?.InvitationSentAtUtc,
+                    FeedbackInvitationSentAtUtc = induction.ProgrammeAttendance?.FeedbackInvitationSentAtUtc,
+                    HasFeedback = induction.EmployeeFeedback is not null
                 })
                 .ToList(),
             ChecklistItems = templates.Select(template =>
@@ -379,6 +516,22 @@ public class PresentersController(
             "Confirm",
             "Attendance",
             new { id = inductionCaseId },
+            Request.Scheme,
+            Request.Host.Value);
+    }
+
+    private string? BuildFeedbackUrl(Guid accessToken)
+    {
+        var token = accessToken.ToString("N");
+        if (emailService.PublicBaseUrl is { Length: > 0 } publicBaseUrl)
+        {
+            return $"{publicBaseUrl.TrimEnd('/')}/Inductions/Feedback/{token}";
+        }
+
+        return Url.Action(
+            "Feedback",
+            "Inductions",
+            new { id = token },
             Request.Scheme,
             Request.Host.Value);
     }

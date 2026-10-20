@@ -441,6 +441,16 @@ textarea.form-control { min-height: auto; }
 .programme-global-task-form { display: grid; grid-template-columns: minmax(150px,.7fr) minmax(220px,1.2fr) minmax(210px,1fr) minmax(160px,.7fr) auto; align-items: start; gap: .8rem; margin-top: .8rem; padding: 1rem; border-radius: .75rem; background: #f5f8f5; }
 .attendance-invitation-modal { max-height: calc(100vh - 2rem); }
 .attendance-invitation-modal .modal-body { min-height: 0; overflow-y: auto; }
+.invitation-email-summary { padding: 1rem; border: 1px solid var(--line); border-radius: .75rem; background: #f7faf7; }
+.invitation-email-summary > strong, .invitation-email-summary > span, .invitation-email-summary > small { display: block; }
+.invitation-email-summary > span { margin-top: .2rem; color: var(--muted); }
+.invitation-email-summary > small { margin-top: .7rem; color: var(--muted); }
+.invitation-schedule-list { display: grid; margin-top: .8rem; overflow: hidden; border: 1px solid var(--line); border-radius: .6rem; background: #fff; }
+.invitation-schedule-list > div { display: grid; grid-template-columns: 115px minmax(0,1fr); gap: .75rem; padding: .55rem .7rem; border-top: 1px solid var(--line); }
+.invitation-schedule-list > div:first-child { border-top: 0; }
+.invitation-schedule-list time { color: var(--green-800); font-size: .8rem; font-weight: 800; }
+.invitation-schedule-list span, .invitation-schedule-list strong, .invitation-schedule-list small { display: block; }
+.invitation-schedule-list small { margin-top: .1rem; color: var(--muted); font-size: .74rem; }
 .attendance-confirm-shell { max-width: 820px; margin: 0 auto; }
 .attendance-confirm-card h2 { margin: 1.1rem 0 .25rem; }
 .attendance-employee { color: var(--muted); }

@@ -341,7 +341,7 @@
                     <div class="empty-state">
                         <h3>Feedback form is ready</h3>
                         <p>Rate every divisional presentation and the overall programme on the dedicated employee form.</p>
-                        <a class="btn btn-primary" asp-action="Feedback" asp-route-id="@induction.Id">Open feedback form</a>
+                        <a class="btn btn-primary" asp-action="Feedback" asp-route-id="@(induction.AccessToken.ToString("N"))">Open feedback form</a>
                     </div>
                 }
                 else
@@ -350,6 +350,10 @@
                         @if (induction.InductionProgramme is null)
                         {
                             <p>An induction programme must be assigned before feedback can be submitted.</p>
+                        }
+                        else if (!Namfisa.Induction.Services.InductionProgrammeRules.IsCompleted(induction.InductionProgramme))
+                        {
+                            <p>Feedback and evaluation will become available after HRBP completes the induction programme.</p>
                         }
                         else if (induction.ProgrammeAttendance?.Status != ProgrammeAttendanceStatus.Present && AccessService.CanSelfConfirmAttendance(User, induction))
                         {

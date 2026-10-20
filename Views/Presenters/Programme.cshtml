@@ -5,6 +5,10 @@
     var absent = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Absent);
     var pending = Model.Attendees.Count(x => x.Status == ProgrammeAttendanceStatus.Pending);
     var attendeesWithEmail = Model.Attendees.Count(x => !string.IsNullOrWhiteSpace(x.Induction.EmployeeEmail));
+    var feedbackEligible = Model.Attendees.Count(x =>
+        x.Status == ProgrammeAttendanceStatus.Present
+        && !x.HasFeedback
+        && !string.IsNullOrWhiteSpace(x.Induction.EmployeeEmail));
     var completedPresentations = Model.Programme.Sessions.Count(x => x.CompletedAtUtc.HasValue);
 }
 
@@ -24,9 +28,29 @@
                 <button class="btn btn-outline-primary btn-lg" type="submit" disabled="@(Model.Attendees.Count == 0 ? "disabled" : null)">Update all employee checklists</button>
             </form>
         }
-        <button class="btn btn-primary btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#attendanceInviteModal" disabled="@(Model.Attendees.Count == 0 ? "disabled" : null)">Send attendance links</button>
+        <button class="btn btn-primary btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#attendanceInviteModal" disabled="@(!Model.CanSendAttendanceInvitations || attendeesWithEmail == 0 ? "disabled" : null)">Invite employees</button>
+        @if (Model.CanManageChecklist)
+        {
+            <button class="btn btn-success btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#feedbackInviteModal" disabled="@(!Model.CanSendFeedbackInvitations || feedbackEligible == 0 ? "disabled" : null)">Send feedback links</button>
+        }
     </div>
 </section>
+
+@if (Model.ProgrammeCompleted)
+{
+    <div class="alert alert-success d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+        <span><strong>Programme completed.</strong> HRBP can now invite present employees to complete feedback and evaluation.</span>
+        <span>@feedbackEligible eligible employee@(feedbackEligible == 1 ? string.Empty : "s")</span>
+    </div>
+}
+else if (Model.CanSendAttendanceInvitations)
+{
+    <div class="alert alert-info"><strong>Pre-programme invitation is open.</strong> Employees receive the date, venue, full presentation schedule, attendance link and attendance guide. Invitations close at @Model.ProgrammeStartsAt.ToString("dd MMM yyyy HH:mm").</div>
+}
+else
+{
+    <div class="alert alert-warning"><strong>Attendance invitations are closed.</strong> Mark all presentations complete to enable HRBP feedback invitations.</div>
+}
 
 <section class="row g-3 mb-4">
     <div class="col-6 col-xl-3"><div class="metric-card"><span class="metric-label">Attendees</span><strong>@Model.Attendees.Count</strong><span class="metric-note">Assigned employees</span></div></div>
@@ -218,7 +242,7 @@
         <form class="modal-content invitation-modal attendance-invitation-modal" asp-action="SendAttendanceInvitations" method="post">
                 <input type="hidden" name="ProgrammeId" value="@Model.Programme.Id" />
                 <div class="modal-header">
-                    <div><p class="eyebrow mb-1">Attendance invitations</p><h2 class="modal-title fs-4" id="attendanceInviteTitle">Send employee check-in links</h2></div>
+                    <div><p class="eyebrow mb-1">Pre-programme invitation</p><h2 class="modal-title fs-4" id="attendanceInviteTitle">Invite employees to confirm attendance</h2></div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -226,6 +250,17 @@
                     {
                         <div class="alert alert-warning"><strong>Email delivery is not ready.</strong> @Model.SmtpSummary</div>
                     }
+                    <div class="invitation-email-summary mb-3">
+                        <strong>Email includes programme schedule</strong>
+                        <span>@Model.Programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy") · @(Model.Programme.Venue ?? "Venue to be confirmed")</span>
+                        <div class="invitation-schedule-list">
+                            @foreach (var session in Model.Programme.Sessions.OrderBy(x => x.SortOrder))
+                            {
+                                <div><time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time><span><strong>@session.Division</strong><small>@session.PresenterName</small></span></div>
+                            }
+                        </div>
+                        <small>The email contains only an attendance-confirmation link and attaches the employee attendance guide.</small>
+                    </div>
                     <div class="invitation-selection-toolbar">
                         <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAllAttendance" disabled="@(attendeesWithEmail == 0 ? "disabled" : null)" /><label class="form-check-label" for="selectAllAttendance">Select all attendees with email</label></div>
                         <span id="attendanceSelectedCount">0 selected</span>
@@ -242,31 +277,88 @@
                         }
                     </div>
                 </div>
-                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="sendAttendanceInvitations" type="submit" data-smtp-ready="@Model.SmtpConfigured.ToString().ToLowerInvariant()" disabled>Send links</button></div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary" id="sendAttendanceInvitations" type="submit" data-smtp-ready="@Model.SmtpConfigured.ToString().ToLowerInvariant()" disabled>Send invitations</button></div>
         </form>
     </div>
 </div>
 
+@if (Model.CanManageChecklist)
+{
+    <div class="modal fade" id="feedbackInviteModal" tabindex="-1" aria-labelledby="feedbackInviteTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <form class="modal-content invitation-modal attendance-invitation-modal" asp-action="SendFeedbackInvitations" method="post">
+                <input type="hidden" name="ProgrammeId" value="@Model.Programme.Id" />
+                <div class="modal-header">
+                    <div><p class="eyebrow mb-1">Post-programme evaluation</p><h2 class="modal-title fs-4" id="feedbackInviteTitle">Send feedback and evaluation links</h2></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!Model.SmtpConfigured)
+                    {
+                        <div class="alert alert-warning"><strong>Email delivery is not ready.</strong> @Model.SmtpSummary</div>
+                    }
+                    <div class="invitation-email-summary mb-3">
+                        <strong>Available after programme completion</strong>
+                        <span>The secure link opens the employee's programme feedback form.</span>
+                        <small>The email attaches the feedback guide. Only present employees without an existing response can be selected.</small>
+                    </div>
+                    <div class="invitation-selection-toolbar">
+                        <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAllFeedback" disabled="@(feedbackEligible == 0 ? "disabled" : null)" /><label class="form-check-label" for="selectAllFeedback">Select all eligible employees</label></div>
+                        <span id="feedbackSelectedCount">0 selected</span>
+                    </div>
+                    <div class="invitation-list">
+                        @foreach (var attendee in Model.Attendees)
+                        {
+                            var hasEmail = !string.IsNullOrWhiteSpace(attendee.Induction.EmployeeEmail);
+                            var eligible = hasEmail && attendee.Status == ProgrammeAttendanceStatus.Present && !attendee.HasFeedback;
+                            var feedbackStatus = attendee.HasFeedback
+                                ? "Feedback submitted"
+                                : !hasEmail
+                                    ? "Email not recorded"
+                                    : attendee.Status != ProgrammeAttendanceStatus.Present
+                                        ? $"Attendance {attendee.Status}"
+                                        : attendee.FeedbackInvitationSentAtUtc.HasValue
+                                            ? $"Last sent {attendee.FeedbackInvitationSentAtUtc.Value.ToLocalTime():dd MMM yyyy HH:mm}"
+                                            : "Ready";
+                            <label class="invitation-choice @(eligible ? string.Empty : "is-unavailable")" for="feedback-invite-@attendee.Induction.Id">
+                                <input class="form-check-input feedback-invite-checkbox" type="checkbox" name="InductionCaseIds" value="@attendee.Induction.Id" id="feedback-invite-@attendee.Induction.Id" disabled="@(eligible ? null : "disabled")" />
+                                <span class="invitation-choice-copy"><strong>@attendee.Induction.EmployeeName</strong><span>@(hasEmail ? attendee.Induction.EmployeeEmail : "Email address not recorded")</span></span>
+                                <span class="invitation-choice-status">@feedbackStatus</span>
+                            </label>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success" id="sendFeedbackInvitations" type="submit" data-smtp-ready="@Model.SmtpConfigured.ToString().ToLowerInvariant()" disabled>Send feedback links</button></div>
+            </form>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <script>
         (() => {
-            const checkboxes = [...document.querySelectorAll('.attendance-invite-checkbox:not(:disabled)')];
-            const selectAll = document.getElementById('selectAllAttendance');
-            const count = document.getElementById('attendanceSelectedCount');
-            const send = document.getElementById('sendAttendanceInvitations');
-            if (!selectAll || !count || !send) return;
-            const smtpReady = send.dataset.smtpReady === 'true';
-            const refresh = () => {
-                const selected = checkboxes.filter(item => item.checked).length;
-                count.textContent = `${selected} selected`;
-                send.disabled = !smtpReady || selected === 0;
-                send.textContent = selected === 0 ? 'Send links' : `Send ${selected} link${selected === 1 ? '' : 's'}`;
-                selectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
-                selectAll.indeterminate = selected > 0 && selected < checkboxes.length;
+            const initialiseInvitations = (checkboxSelector, selectAllId, countId, sendId, noun) => {
+                const checkboxes = [...document.querySelectorAll(`${checkboxSelector}:not(:disabled)`)];
+                const selectAll = document.getElementById(selectAllId);
+                const count = document.getElementById(countId);
+                const send = document.getElementById(sendId);
+                if (!selectAll || !count || !send) return;
+                const smtpReady = send.dataset.smtpReady === 'true';
+                const refresh = () => {
+                    const selected = checkboxes.filter(item => item.checked).length;
+                    count.textContent = `${selected} selected`;
+                    send.disabled = !smtpReady || selected === 0;
+                    send.textContent = selected === 0 ? `Send ${noun}` : `Send ${selected} ${noun}${selected === 1 ? '' : 's'}`;
+                    selectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
+                    selectAll.indeterminate = selected > 0 && selected < checkboxes.length;
+                };
+                selectAll.addEventListener('change', () => { checkboxes.forEach(item => item.checked = selectAll.checked); refresh(); });
+                checkboxes.forEach(item => item.addEventListener('change', refresh));
+                refresh();
             };
-            selectAll.addEventListener('change', () => { checkboxes.forEach(item => item.checked = selectAll.checked); refresh(); });
-            checkboxes.forEach(item => item.addEventListener('change', refresh));
-            refresh();
+
+            initialiseInvitations('.attendance-invite-checkbox', 'selectAllAttendance', 'attendanceSelectedCount', 'sendAttendanceInvitations', 'invitation');
+            initialiseInvitations('.feedback-invite-checkbox', 'selectAllFeedback', 'feedbackSelectedCount', 'sendFeedbackInvitations', 'feedback link');
         })();
     </script>
 }

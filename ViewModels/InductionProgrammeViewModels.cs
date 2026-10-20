@@ -114,6 +114,10 @@ public class PresenterProgrammeViewModel
     public IReadOnlyList<PresenterChecklistItemViewModel> ChecklistItems { get; set; } = [];
     public bool CanManageChecklist { get; set; }
     public bool LockChecklistWhenSignOffStarts { get; set; }
+    public bool CanSendAttendanceInvitations { get; set; }
+    public bool CanSendFeedbackInvitations { get; set; }
+    public bool ProgrammeCompleted { get; set; }
+    public DateTime ProgrammeStartsAt { get; set; }
     public bool SmtpConfigured { get; set; }
     public string SmtpSummary { get; set; } = string.Empty;
 }
@@ -172,9 +176,20 @@ public class PresenterAttendeeViewModel
     public string? ConfirmedBy { get; set; }
     public string? ConfirmationSource { get; set; }
     public DateTime? InvitationSentAtUtc { get; set; }
+    public DateTime? FeedbackInvitationSentAtUtc { get; set; }
+    public bool HasFeedback { get; set; }
 }
 
 public class SendAttendanceInvitationsViewModel
+{
+    [Required]
+    public int ProgrammeId { get; set; }
+
+    [Required, MinLength(1)]
+    public int[] InductionCaseIds { get; set; } = [];
+}
+
+public class SendFeedbackInvitationsViewModel
 {
     [Required]
     public int ProgrammeId { get; set; }

@@ -532,6 +532,17 @@ namespace Namfisa.Induction.Migrations
                         .HasMaxLength(184)
                         .HasColumnType("nvarchar(184)");
 
+                    b.Property<DateTime?>("FeedbackInvitationSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FeedbackInvitationSentBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("FeedbackInvitationSentTo")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
                     b.Property<int>("InductionCaseId")
                         .HasColumnType("int");
 

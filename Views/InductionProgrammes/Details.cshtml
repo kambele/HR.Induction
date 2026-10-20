@@ -8,6 +8,8 @@
         : programme.ChecklistPhases.Select(x => x.Phase).OrderBy(x => x).ToArray();
     var assignableEmployees = Model.AvailableEmployees.Count(x => x.CanAssign);
     var refreshableEmployees = Model.AssignedEmployees.Count(x => x.CanApplyPhases);
+    var programmeCompleted = Namfisa.Induction.Services.InductionProgrammeRules.IsCompleted(programme);
+    var canInviteEmployees = Namfisa.Induction.Services.InductionProgrammeRules.CanSendAttendanceInvitations(programme, DateTime.Now);
 }
 
 <section class="page-heading d-flex flex-column flex-lg-row align-items-lg-end justify-content-between gap-3">
@@ -19,7 +21,7 @@
     </div>
     <div class="d-flex flex-wrap gap-2">
         <span class="programme-status programme-status-@programme.Status.ToString().ToLowerInvariant()">@programme.Status</span>
-        <a class="btn btn-outline-primary" asp-controller="Presenters" asp-action="Programme" asp-route-id="@programme.Id">Attendance</a>
+        <a class="btn btn-outline-primary" asp-controller="Presenters" asp-action="Programme" asp-route-id="@programme.Id">@(programmeCompleted ? "Send feedback links" : canInviteEmployees ? "Invite employees" : "Attendance and invitations")</a>
         <a class="btn btn-outline-primary" asp-action="Edit" asp-route-id="@programme.Id">Edit programme</a>
         <a class="btn btn-primary" asp-action="Report" asp-route-id="@programme.Id">View report</a>
     </div>

@@ -383,6 +383,7 @@ public class InductionsController(
             SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,
             CanSubmitFeedback = inductionCase.EmployeeFeedback is null
                 && inductionCase.InductionProgramme?.Sessions.Count > 0
+                && InductionProgrammeRules.IsCompleted(inductionCase.InductionProgramme)
                 && inductionCase.ProgrammeAttendance?.Status == ProgrammeAttendanceStatus.Present
                 && accessService.CanSubmitFeedback(User, inductionCase),
             CanSignEmployee = accessService.CanSign(User, inductionCase, SignOffRole.Employee)
@@ -651,21 +652,43 @@ public class InductionsController(
     }
 
     [HttpGet]
-    public async Task<IActionResult> Feedback(int id)
+    public async Task<IActionResult> Feedback(string id)
     {
-        var inductionCase = await dbContext.InductionCases
+        var query = dbContext.InductionCases
             .AsNoTracking()
             .Include(x => x.EmployeeFeedback)
                 .ThenInclude(x => x!.PresentationRatings)
                     .ThenInclude(x => x.InductionProgrammeSession)
             .Include(x => x.ProgrammeAttendance)
             .Include(x => x.InductionProgramme)
-                .ThenInclude(x => x!.Sessions)
-            .SingleOrDefaultAsync(x => x.Id == id, HttpContext.RequestAborted);
+                .ThenInclude(x => x!.Sessions);
+
+        InductionCase? inductionCase;
+        if (Guid.TryParse(id, out var accessToken))
+        {
+            inductionCase = await query.SingleOrDefaultAsync(
+                x => x.AccessToken == accessToken,
+                HttpContext.RequestAborted);
+        }
+        else if (int.TryParse(id, out var legacyId))
+        {
+            inductionCase = await query.SingleOrDefaultAsync(
+                x => x.Id == legacyId,
+                HttpContext.RequestAborted);
+        }
+        else
+        {
+            return NotFound();
+        }
 
         if (inductionCase is null) return NotFound();
         if (!accessService.CanSubmitFeedback(User, inductionCase)) return Forbid();
         if (inductionCase.InductionProgramme is null) return BadRequest("No induction programme is assigned to this employee.");
+        if (!InductionProgrammeRules.IsCompleted(inductionCase.InductionProgramme))
+        {
+            TempData["Error"] = "Feedback and evaluation become available after the induction programme is completed.";
+            return RedirectToDetails(inductionCase);
+        }
 
         return View(BuildFeedbackPageModel(inductionCase));
     }
@@ -683,10 +706,16 @@ public class InductionsController(
 
         if (inductionCase is null) return NotFound();
         if (!accessService.CanSubmitFeedback(User, inductionCase)) return Forbid();
+        if (inductionCase.InductionProgramme is null
+            || !InductionProgrammeRules.IsCompleted(inductionCase.InductionProgramme))
+        {
+            TempData["Error"] = "Feedback and evaluation become available after the induction programme is completed.";
+            return RedirectToDetails(inductionCase);
+        }
         if (inductionCase.EmployeeFeedback is not null)
         {
             TempData["Error"] = "Feedback has already been submitted.";
-            return RedirectToAction(nameof(Feedback), new { id = inductionCase.Id });
+            return RedirectToAction(nameof(Feedback), new { id = inductionCase.AccessToken.ToString("N") });
         }
 
         if (inductionCase.ProgrammeAttendance?.Status != ProgrammeAttendanceStatus.Present)
@@ -730,7 +759,7 @@ public class InductionsController(
 
         await dbContext.SaveChangesAsync();
         TempData["Success"] = "Employee induction feedback submitted.";
-        return RedirectToAction(nameof(Feedback), new { id = inductionCase.Id });
+        return RedirectToAction(nameof(Feedback), new { id = inductionCase.AccessToken.ToString("N") });
     }
 
     private static EmployeeFeedbackPageViewModel BuildFeedbackPageModel(

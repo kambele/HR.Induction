@@ -19,6 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="output\pdf\NAMFISA_Employee_Induction_Attendance_Guide.pdf"
+                      LogicalName="Namfisa.Induction.EmailAttachments.EmployeeAttendanceGuide.pdf" />
     <EmbeddedResource Include="output\pdf\NAMFISA_Employee_Induction_Feedback_Guide.pdf"
                       LogicalName="Namfisa.Induction.EmailAttachments.EmployeeFeedbackGuide.pdf" />
   </ItemGroup>

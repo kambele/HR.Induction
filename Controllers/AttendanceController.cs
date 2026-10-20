@@ -60,8 +60,10 @@ public class AttendanceController(
         await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
 
         TempData["Success"] = $"Attendance confirmed as {status.ToString().ToLowerInvariant()}.";
-        return status == ProgrammeAttendanceStatus.Present && induction.EmployeeFeedback is null
-            ? RedirectToAction("Feedback", "Inductions", new { id = induction.Id })
+        return status == ProgrammeAttendanceStatus.Present
+            && induction.EmployeeFeedback is null
+            && InductionProgrammeRules.IsCompleted(induction.InductionProgramme)
+            ? RedirectToAction("Feedback", "Inductions", new { id = induction.AccessToken.ToString("N") })
             : RedirectToAction(nameof(Confirm), new { id = induction.Id });
     }
 

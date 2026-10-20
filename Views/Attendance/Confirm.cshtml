@@ -3,6 +3,7 @@
     ViewData["Title"] = "Confirm attendance";
     var programme = Model.InductionProgramme!;
     var attendanceStatus = Model.ProgrammeAttendance?.Status ?? ProgrammeAttendanceStatus.Pending;
+    var programmeCompleted = Namfisa.Induction.Services.InductionProgrammeRules.IsCompleted(programme);
 }
 
 <section class="page-heading compact-heading">
@@ -38,7 +39,7 @@
             <div class="attendance-choice-grid">
                 <button class="attendance-choice present @(attendanceStatus == ProgrammeAttendanceStatus.Present ? "is-selected" : null)" type="submit" name="status" value="Present">
                     <span class="attendance-choice-icon">✓</span>
-                    <span><strong>I am present</strong><small>Confirm attendance and continue to feedback</small></span>
+                    <span><strong>I am present</strong><small>Confirm that you attended this programme</small></span>
                 </button>
                 <button class="attendance-choice absent @(attendanceStatus == ProgrammeAttendanceStatus.Absent ? "is-selected" : null)" type="submit" name="status" value="Absent">
                     <span class="attendance-choice-icon">×</span>
@@ -47,12 +48,16 @@
             </div>
         </form>
 
-        @if (attendanceStatus == ProgrammeAttendanceStatus.Present)
+        @if (attendanceStatus == ProgrammeAttendanceStatus.Present && programmeCompleted)
         {
             <div class="form-actions mt-4">
-                <a class="btn btn-primary" asp-controller="Inductions" asp-action="Feedback" asp-route-id="@Model.Id">@(Model.EmployeeFeedback is null ? "Continue to feedback" : "View submitted feedback")</a>
+                <a class="btn btn-primary" asp-controller="Inductions" asp-action="Feedback" asp-route-id="@(Model.AccessToken.ToString("N"))">@(Model.EmployeeFeedback is null ? "Continue to feedback" : "View submitted feedback")</a>
                 <a class="btn btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@(Model.AccessToken.ToString("N"))">Open induction plan</a>
             </div>
+        }
+        else if (attendanceStatus == ProgrammeAttendanceStatus.Present)
+        {
+            <div class="alert alert-info mt-4 mb-0">Attendance is confirmed. HRBP will send your feedback and evaluation link after the programme is completed.</div>
         }
 
         @if (Model.ProgrammeAttendance?.ConfirmedAtUtc is DateTime confirmedAt)
