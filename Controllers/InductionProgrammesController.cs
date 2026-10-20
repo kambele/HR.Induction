@@ -280,7 +280,8 @@ public class InductionProgrammesController(
                     PresenterName = x.PresenterName,
                     PresenterUsername = x.PresenterUsername,
                     StartTime = x.StartTime,
-                    EndTime = x.EndTime
+                    EndTime = x.EndTime,
+                    RequiresFeedback = x.RequiresFeedback
                 }).ToList()
         };
         await LoadDivisionOptionsAsync(model);
@@ -312,7 +313,8 @@ public class InductionProgrammesController(
                 PresenterName = x.PresenterName,
                 PresenterUsername = x.PresenterUsername,
                 StartTime = x.StartTime,
-                EndTime = x.EndTime
+                EndTime = x.EndTime,
+                RequiresFeedback = x.RequiresFeedback
             }).ToList();
         }
 
@@ -340,16 +342,18 @@ public class InductionProgrammesController(
             .Where(x => x?.OverallProgrammeRating is not null)
             .Select(x => x!)
             .ToList();
-        var allPresentationRatings = programme.Sessions.SelectMany(x => x.Ratings).ToList();
+        var feedbackSessions = programme.Sessions.Where(x => x.RequiresFeedback).ToList();
+        var allPresentationRatings = feedbackSessions.SelectMany(x => x.Ratings).ToList();
         var model = new InductionProgrammeReportViewModel
         {
             Programme = programme,
+            FeedbackRequired = feedbackSessions.Count > 0,
             ParticipantCount = programme.Participants.Count,
             ResponseCount = responses.Count,
             ResponseRate = programme.Participants.Count == 0 ? 0 : Math.Round(responses.Count * 100m / programme.Participants.Count, 1),
             AverageOverallRating = responses.Count == 0 ? 0 : responses.Average(x => x.OverallProgrammeRating!.Value),
             AveragePresentationRating = allPresentationRatings.Count == 0 ? 0 : allPresentationRatings.Average(x => x.Rating),
-            DivisionRatings = programme.Sessions.OrderBy(x => x.SortOrder).Select(x => new DivisionRatingSummary(
+            DivisionRatings = feedbackSessions.OrderBy(x => x.SortOrder).Select(x => new DivisionRatingSummary(
                 x.Division,
                 x.PresenterName,
                 x.Ratings.Count == 0 ? 0 : Math.Round(x.Ratings.Average(r => r.Rating), 2),
@@ -480,7 +484,8 @@ public class InductionProgrammesController(
                 PresenterUsername = ordered[index].PresenterUsername.Trim(),
                 StartTime = ordered[index].StartTime!.Value,
                 EndTime = ordered[index].EndTime!.Value,
-                SortOrder = index + 1
+                SortOrder = index + 1,
+                RequiresFeedback = ordered[index].RequiresFeedback
             });
         }
     }

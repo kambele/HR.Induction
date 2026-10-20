@@ -359,7 +359,11 @@ textarea.form-control { min-height: auto; }
 .programme-phase-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; }
 .programme-phase-badges span { padding: .45rem .7rem; color: var(--green-800); background: var(--green-100); border: 1px solid #d0e2d5; border-radius: 999px; font-size: .76rem; font-weight: 800; }
 .programme-session-editor { display: grid; gap: .8rem; }
-.programme-session-row { display: grid; grid-template-columns: minmax(180px,1.1fr) minmax(165px,1fr) minmax(190px,1fr) 125px 125px auto; align-items: end; gap: .8rem; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: #fbfcfa; }
+.programme-session-row { display: grid; grid-template-columns: minmax(180px,1.1fr) minmax(165px,1fr) minmax(190px,1fr) 125px 125px minmax(155px,.8fr) auto; align-items: end; gap: .8rem; padding: 1rem; border: 1px solid var(--line); border-radius: .8rem; background: #fbfcfa; }
+.programme-session-feedback { display: flex; align-items: center; gap: .6rem; min-height: 38px; margin: 0; padding: .45rem .6rem; cursor: pointer; border: 1px solid var(--line); border-radius: .45rem; background: #fff; }
+.programme-session-feedback input { flex: 0 0 auto; margin: 0; }
+.programme-session-feedback strong, .programme-session-feedback small { display: block; }
+.programme-session-feedback small { color: var(--muted); font-size: .7rem; }
 .programme-participant-list { display: grid; }
 .programme-participant-list a { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .85rem .2rem; color: var(--ink); text-decoration: none; border-bottom: 1px solid #edf1ed; }
 .programme-participant-list a:last-child { border-bottom: 0; }

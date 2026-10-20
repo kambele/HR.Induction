@@ -4,7 +4,7 @@
     ViewData["Title"] = "Induction feedback";
     var induction = Model.Induction;
     var programme = induction.InductionProgramme!;
-    var sessions = programme.Sessions.OrderBy(x => x.SortOrder).ToList();
+    var sessions = programme.Sessions.Where(x => x.RequiresFeedback).OrderBy(x => x.SortOrder).ToList();
     string RatingText(int? rating) => rating switch
     {
         5 => "Excellent / Strongly agree",
@@ -86,7 +86,7 @@
             else
             {
                 <div class="card-heading">
-                    <div><p class="eyebrow mb-1">Corporate induction evaluation</p><h2>Rate every presentation</h2><p>Use the 1–5 scale, then complete the overall programme questions.</p></div>
+                    <div><p class="eyebrow mb-1">Corporate induction evaluation</p><h2>Rate the applicable presentations</h2><p>Only presentations marked for employee feedback are listed. Use the 1–5 scale, then complete the overall programme questions.</p></div>
                 </div>
                 <form asp-action="SubmitFeedback" method="post">
                     <input type="hidden" name="InductionCaseId" value="@induction.Id" />

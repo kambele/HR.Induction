@@ -227,6 +227,11 @@ public class PresentersController(
             TempData["Error"] = "Feedback invitations become available only after the programme is completed.";
             return RedirectToAction(nameof(Programme), new { id = programme.Id });
         }
+        if (!InductionProgrammeRules.RequiresFeedback(programme))
+        {
+            TempData["Error"] = "Employee feedback is not required for this induction programme.";
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
         if (!ModelState.IsValid || model.InductionCaseIds.Length == 0)
         {
             TempData["Error"] = "Select at least one eligible employee to invite for feedback.";
@@ -419,6 +424,7 @@ public class PresentersController(
         var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
         var programmeStartsAt = InductionProgrammeRules.StartsAt(programme);
         var programmeCompleted = InductionProgrammeRules.IsCompleted(programme);
+        var feedbackRequired = InductionProgrammeRules.RequiresFeedback(programme);
         var isHr = accessService.IsHr(User);
         var applicablePhases = programme.ChecklistPhases.Count == 0
             ? Enum.GetValues<InductionPhase>().ToHashSet()
@@ -435,7 +441,8 @@ public class PresentersController(
             CanManageChecklist = isHr,
             LockChecklistWhenSignOffStarts = settings.LockChecklistWhenSignOffStarts,
             CanSendAttendanceInvitations = InductionProgrammeRules.CanSendAttendanceInvitations(programme, DateTime.Now),
-            CanSendFeedbackInvitations = isHr && programmeCompleted,
+            CanSendFeedbackInvitations = isHr && programmeCompleted && feedbackRequired,
+            FeedbackRequired = feedbackRequired,
             ProgrammeCompleted = programmeCompleted,
             ProgrammeStartsAt = programmeStartsAt,
             SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,

@@ -373,6 +373,7 @@ public class InductionsController(
         var completed = applicableTasks.Count(x =>
             x.Status is InductionTaskStatus.Completed or InductionTaskStatus.NotApplicable);
         var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
+        var programmeRequiresFeedback = InductionProgrammeRules.RequiresFeedback(inductionCase.InductionProgramme);
 
         return View(new InductionDetailsViewModel
         {
@@ -382,12 +383,15 @@ public class InductionsController(
             CanManage = accessService.IsHr(User),
             SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,
             CanSubmitFeedback = inductionCase.EmployeeFeedback is null
-                && inductionCase.InductionProgramme?.Sessions.Count > 0
+                && inductionCase.InductionProgramme is not null
+                && programmeRequiresFeedback
                 && InductionProgrammeRules.IsCompleted(inductionCase.InductionProgramme)
                 && inductionCase.ProgrammeAttendance?.Status == ProgrammeAttendanceStatus.Present
                 && accessService.CanSubmitFeedback(User, inductionCase),
             CanSignEmployee = accessService.CanSign(User, inductionCase, SignOffRole.Employee)
-                && (!settings.RequireEmployeeFeedbackBeforeSignOff || inductionCase.EmployeeFeedback is not null),
+                && (!settings.RequireEmployeeFeedbackBeforeSignOff
+                    || !programmeRequiresFeedback
+                    || inductionCase.EmployeeFeedback is not null),
             CanSignLineManager = accessService.CanSign(User, inductionCase, SignOffRole.LineManager)
                 && (!settings.EnforceSequentialSignOff
                     || inductionCase.SignOffs.Any(x => x.Role == SignOffRole.Employee)),
@@ -396,7 +400,8 @@ public class InductionsController(
                     || inductionCase.SignOffs.Any(x => x.Role == SignOffRole.LineManager)),
             LockChecklistWhenSignOffStarts = settings.LockChecklistWhenSignOffStarts,
             RequireMandatoryTasksBeforeSignOff = settings.RequireMandatoryTasksBeforeSignOff,
-            RequireEmployeeFeedbackBeforeSignOff = settings.RequireEmployeeFeedbackBeforeSignOff,
+            RequireEmployeeFeedbackBeforeSignOff = settings.RequireEmployeeFeedbackBeforeSignOff
+                && programmeRequiresFeedback,
             ProgrammeChecklistPhases = inductionCase.InductionProgramme?.ChecklistPhases.Count > 0
                 ? inductionCase.InductionProgramme.ChecklistPhases.Select(x => x.Phase).OrderBy(x => x).ToList()
                 : Enum.GetValues<InductionPhase>()
@@ -689,6 +694,11 @@ public class InductionsController(
             TempData["Error"] = "Feedback and evaluation become available after the induction programme is completed.";
             return RedirectToDetails(inductionCase);
         }
+        if (!InductionProgrammeRules.RequiresFeedback(inductionCase.InductionProgramme))
+        {
+            TempData["Error"] = "Employee feedback is not required for this induction programme.";
+            return RedirectToDetails(inductionCase);
+        }
 
         return View(BuildFeedbackPageModel(inductionCase));
     }
@@ -712,6 +722,11 @@ public class InductionsController(
             TempData["Error"] = "Feedback and evaluation become available after the induction programme is completed.";
             return RedirectToDetails(inductionCase);
         }
+        if (!InductionProgrammeRules.RequiresFeedback(inductionCase.InductionProgramme))
+        {
+            TempData["Error"] = "Employee feedback is not required for this induction programme.";
+            return RedirectToDetails(inductionCase);
+        }
         if (inductionCase.EmployeeFeedback is not null)
         {
             TempData["Error"] = "Feedback has already been submitted.";
@@ -723,7 +738,10 @@ public class InductionsController(
             ModelState.AddModelError(string.Empty, "Attendance must be confirmed as present before feedback can be submitted.");
         }
 
-        var programmeSessions = inductionCase.InductionProgramme?.Sessions.OrderBy(x => x.SortOrder).ToList() ?? [];
+        var programmeSessions = inductionCase.InductionProgramme?.Sessions
+            .Where(x => x.RequiresFeedback)
+            .OrderBy(x => x.SortOrder)
+            .ToList() ?? [];
         var submittedRatings = model.PresentationRatings
             .GroupBy(x => x.ProgrammeSessionId)
             .ToDictionary(x => x.Key, x => x.First());
@@ -734,7 +752,7 @@ public class InductionsController(
         else if (submittedRatings.Count != programmeSessions.Count
             || programmeSessions.Any(x => !submittedRatings.ContainsKey(x.Id)))
         {
-            ModelState.AddModelError(nameof(model.PresentationRatings), "Rate every divisional presentation in the assigned programme.");
+            ModelState.AddModelError(nameof(model.PresentationRatings), "Rate every presentation included in the employee evaluation.");
         }
 
         if (!ModelState.IsValid)
@@ -772,6 +790,7 @@ public class InductionsController(
         {
             InductionCaseId = inductionCase.Id,
             PresentationRatings = inductionCase.InductionProgramme?.Sessions
+                .Where(x => x.RequiresFeedback)
                 .OrderBy(x => x.SortOrder)
                 .Select(x => new PresentationRatingInputModel { ProgrammeSessionId = x.Id })
                 .ToList() ?? []
@@ -787,6 +806,8 @@ public class InductionsController(
             .Include(x => x.Tasks)
             .Include(x => x.SignOffs)
             .Include(x => x.EmployeeFeedback)
+            .Include(x => x.InductionProgramme)
+                .ThenInclude(x => x!.Sessions)
             .SingleOrDefaultAsync(x => x.Id == model.InductionCaseId);
 
         if (inductionCase is null) return NotFound();
@@ -810,6 +831,7 @@ public class InductionsController(
 
         if (settings.RequireEmployeeFeedbackBeforeSignOff
             && model.Role == SignOffRole.Employee
+            && InductionProgrammeRules.RequiresFeedback(inductionCase.InductionProgramme)
             && inductionCase.EmployeeFeedback is null)
         {
             TempData["Error"] = "Employee feedback must be submitted before employee sign-off.";

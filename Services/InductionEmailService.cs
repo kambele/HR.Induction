@@ -145,7 +145,10 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         var scheduleText = string.Join("\r\n", programme.Sessions
             .OrderBy(x => x.SortOrder)
             .Select(x => $"{x.StartTime:hh\\:mm}-{x.EndTime:hh\\:mm} | {x.Division} | {x.PresenterName}"));
-        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\nYou are scheduled to attend {programme.Title} on {programme.ProgrammeDate:dddd, dd MMMM yyyy} at {venue}. Please review the programme schedule below, then use the link to confirm whether you will be present or absent.\r\n\r\nProgramme schedule:\r\n{scheduleText}\r\n\r\nConfirm attendance: {attendanceUrl}\r\n\r\nA step-by-step attendance confirmation guide is attached to this email. A separate feedback invitation will be sent after the programme is completed.";
+        var feedbackNote = InductionProgrammeRules.RequiresFeedback(programme)
+            ? "A separate feedback invitation will be sent after the programme is completed."
+            : "Employee feedback and evaluation are not required for this programme.";
+        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\nYou are scheduled to attend {programme.Title} on {programme.ProgrammeDate:dddd, dd MMMM yyyy} at {venue}. Please review the programme schedule below, then use the link to confirm whether you will be present or absent.\r\n\r\nProgramme schedule:\r\n{scheduleText}\r\n\r\nConfirm attendance: {attendanceUrl}\r\n\r\nA step-by-step attendance confirmation guide is attached to this email. {feedbackNote}";
 
         using var message = new MailMessage
         {
@@ -201,7 +204,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         }
 
         var subject = $"Feedback and evaluation: {programme.Title}";
-        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\n{programme.Title} has been completed. Please use the secure link below and sign in with your NAMFISA Windows account to rate every divisional presentation and complete the overall programme evaluation.\r\n\r\nComplete feedback and evaluation: {feedbackUrl}\r\n\r\nThe attached guide explains each step. Feedback can be submitted only once.";
+        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\n{programme.Title} has been completed. Please use the secure link below and sign in with your NAMFISA Windows account to rate each presentation included in the evaluation and complete the overall programme evaluation.\r\n\r\nComplete feedback and evaluation: {feedbackUrl}\r\n\r\nThe attached guide explains each step. Feedback can be submitted only once.";
 
         using var message = new MailMessage
         {
@@ -434,6 +437,10 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         var safeProgrammeDate = WebUtility.HtmlEncode(programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy", CultureInfo.InvariantCulture));
         var safeVenue = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(programme.Venue) ? "Venue to be confirmed" : programme.Venue);
         var safeUrl = WebUtility.HtmlEncode(attendanceUrl);
+        var safeFeedbackNote = WebUtility.HtmlEncode(
+            InductionProgrammeRules.RequiresFeedback(programme)
+                ? "Feedback will be requested separately after the programme is completed."
+                : "Employee feedback and evaluation are not required for this programme.");
         var scheduleRows = string.Join(string.Empty, programme.Sessions
             .OrderBy(x => x.SortOrder)
             .Select(x => $"<tr><td style=\"padding:9px 10px;border-top:1px solid #e4ebe5;font-weight:700;white-space:nowrap;\">{x.StartTime:hh\\:mm}-{x.EndTime:hh\\:mm}</td><td style=\"padding:9px 10px;border-top:1px solid #e4ebe5;\"><strong>{WebUtility.HtmlEncode(x.Division)}</strong><br><span style=\"font-size:12px;color:#66736c;\">{WebUtility.HtmlEncode(x.PresenterName)}</span></td></tr>"));
@@ -462,7 +469,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
                         <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Confirm attendance</a>
                       </td></tr></table>
-                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Attendance guide attached</strong><br>The attached one-page guide explains how to review the schedule and confirm attendance. Feedback will be requested separately after the programme is completed.</div>
+                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Attendance guide attached</strong><br>The attached one-page guide explains how to review the schedule and confirm attendance. {{safeFeedbackNote}}</div>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">Attendance confirmations are recorded against the authenticated employee AD account.</td></tr>
@@ -496,7 +503,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <div style="font-size:26px;font-weight:700;margin-top:6px;">Feedback and evaluation</div>
                     </td></tr>
                     <tr><td style="padding:30px;">
-                      <p style="font-size:16px;line-height:1.65;margin-top:0;">Hello {{safeEmployeeName}}, the induction programme has been completed. Please evaluate every divisional presentation and the overall programme.</p>
+                      <p style="font-size:16px;line-height:1.65;margin-top:0;">Hello {{safeEmployeeName}}, the induction programme has been completed. Please evaluate each presentation included in the feedback form and the overall programme.</p>
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0;background:#f7faf7;border:1px solid #dce4dd;border-radius:10px;">
                         <tr><td style="padding:16px 18px;">
                           <div style="font-size:18px;font-weight:700;">{{safeProgrammeTitle}}</div>
@@ -506,7 +513,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
                         <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Complete feedback and evaluation</a>
                       </td></tr></table>
-                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Feedback guide attached</strong><br>Rate every presentation, answer the overall programme questions and review your responses before submitting. Feedback can be submitted only once.</div>
+                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Feedback guide attached</strong><br>Rate each presentation shown, answer the overall programme questions and review your responses before submitting. Feedback can be submitted only once.</div>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">Feedback is recorded against the authenticated employee AD account.</td></tr>

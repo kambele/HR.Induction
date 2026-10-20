@@ -101,6 +101,7 @@ public class AttendanceController(
 
         return status == ProgrammeAttendanceStatus.Present
             && induction.EmployeeFeedback is null
+            && InductionProgrammeRules.RequiresFeedback(induction.InductionProgramme)
             && InductionProgrammeRules.IsCompleted(induction.InductionProgramme)
             ? RedirectToAction("Feedback", "Inductions", new { id = induction.AccessToken.ToString("N") })
             : RedirectToAction(nameof(Confirm), new { id = induction.Id });

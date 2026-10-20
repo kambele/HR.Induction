@@ -165,7 +165,11 @@ public sealed class InductionReportService(IWebHostEnvironment environment) : II
             .Where(x => x?.OverallProgrammeRating is not null)
             .Select(x => x!)
             .ToList();
-        var presentationRatings = programme.Sessions.SelectMany(x => x.Ratings).ToList();
+        var feedbackRequired = InductionProgrammeRules.RequiresFeedback(programme);
+        var presentationRatings = programme.Sessions
+            .Where(x => x.RequiresFeedback)
+            .SelectMany(x => x.Ratings)
+            .ToList();
         var responseRate = programme.Participants.Count == 0
             ? 0
             : (int)Math.Round(responses.Count * 100d / programme.Participants.Count);
@@ -182,29 +186,44 @@ public sealed class InductionReportService(IWebHostEnvironment environment) : II
             ("Divisional presentations", programme.Sessions.Count.ToString()),
             ("Checklist phases", string.Join(", ", checklistPhases.Select(DisplayText.For))),
             ("Employees assigned", programme.Participants.Count.ToString()),
-            ("Feedback responses", $"{responses.Count} ({responseRate}%)")
+            ("Feedback responses", feedbackRequired ? $"{responses.Count} ({responseRate}%)" : "Not required")
         ]);
 
         report.AddSection("PROGRAMME SCHEDULE AND PRESENTATION RATINGS");
         foreach (var session in programme.Sessions.OrderBy(x => x.SortOrder))
         {
-            var average = session.Ratings.Count == 0 ? "No ratings" : $"Average {session.Ratings.Average(x => x.Rating):0.00}/5 from {session.Ratings.Count} response(s)";
+            var average = !session.RequiresFeedback
+                ? "Employee feedback not required"
+                : session.Ratings.Count == 0
+                    ? "No ratings"
+                    : $"Average {session.Ratings.Average(x => x.Rating):0.00}/5 from {session.Ratings.Count} response(s)";
             report.AddLabelValue(
                 $"{session.StartTime:hh\\:mm}-{session.EndTime:hh\\:mm}  {session.Division}",
                 $"Presenter: {session.PresenterName}. {average}.");
         }
 
         report.AddSection("EVALUATION SUMMARY");
-        report.AddLabelValue("Average overall programme rating", responses.Count == 0 ? "No responses" : $"{responses.Average(x => x.OverallProgrammeRating!.Value):0.00}/5");
-        report.AddLabelValue("Average divisional presentation rating", presentationRatings.Count == 0 ? "No responses" : $"{presentationRatings.Average(x => x.Rating):0.00}/5");
-        report.AddLabelValue("Programme understanding", responses.Count == 0 ? "No responses" : $"{responses.Average(x => x.ProgrammeUnderstandingRating ?? 0):0.00}/5");
-        foreach (var allocation in Enum.GetValues<TimeAllocationResponse>())
+        if (!feedbackRequired)
         {
-            report.AddLabelValue(TimeAllocationText(allocation), responses.Count(x => x.TimeAllocationResponse == allocation).ToString());
+            report.AddNotice("Employee feedback and evaluation were not required for this programme.");
+        }
+        else
+        {
+            report.AddLabelValue("Average overall programme rating", responses.Count == 0 ? "No responses" : $"{responses.Average(x => x.OverallProgrammeRating!.Value):0.00}/5");
+            report.AddLabelValue("Average divisional presentation rating", presentationRatings.Count == 0 ? "No responses" : $"{presentationRatings.Average(x => x.Rating):0.00}/5");
+            report.AddLabelValue("Programme understanding", responses.Count == 0 ? "No responses" : $"{responses.Average(x => x.ProgrammeUnderstandingRating ?? 0):0.00}/5");
+            foreach (var allocation in Enum.GetValues<TimeAllocationResponse>())
+            {
+                report.AddLabelValue(TimeAllocationText(allocation), responses.Count(x => x.TimeAllocationResponse == allocation).ToString());
+            }
         }
 
         report.AddSection("EMPLOYEE COMMENTS");
-        if (responses.Count == 0)
+        if (!feedbackRequired)
+        {
+            report.AddNotice("Employee comments were not requested for this programme.");
+        }
+        else if (responses.Count == 0)
         {
             report.AddNotice("No employee feedback has been submitted for this programme.");
         }

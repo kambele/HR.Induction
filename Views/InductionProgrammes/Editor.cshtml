@@ -40,11 +40,11 @@
         <span asp-validation-for="ApplicableChecklistPhases" class="text-danger"></span>
     </section>
 
-    <div class="card-heading"><div><h2>Divisional presentation schedule</h2><p>One presentation per division. Time slots cannot overlap.</p></div>@if (!Model.ScheduleLocked){<button class="btn btn-sm btn-outline-primary" id="addProgrammeSession" type="button">Add presentation</button>}</div>
+    <div class="card-heading"><div><h2>Divisional presentation schedule</h2><p>One presentation per division. Time slots cannot overlap. Switch off feedback for agenda items employees should not rate.</p></div>@if (!Model.ScheduleLocked){<button class="btn btn-sm btn-outline-primary" id="addProgrammeSession" type="button">Add presentation</button>}</div>
     @if (Model.ScheduleLocked)
     {
         <div class="alert alert-info">The presentation schedule is locked because employees have submitted ratings. Programme details and status can still be updated.</div>
-        <div class="table-responsive"><table class="table programme-schedule-table"><thead><tr><th>Time</th><th>Division</th><th>Presenter</th><th>Presenter AD ID</th></tr></thead><tbody>@foreach(var session in Model.Sessions.OrderBy(x => x.StartTime)){<tr><td>@session.StartTime?.ToString("hh\\:mm")-@session.EndTime?.ToString("hh\\:mm")</td><td>@session.Division</td><td>@session.PresenterName</td><td><code>@session.PresenterUsername</code></td></tr>}</tbody></table></div>
+        <div class="table-responsive"><table class="table programme-schedule-table"><thead><tr><th>Time</th><th>Division</th><th>Presenter</th><th>Presenter AD ID</th><th>Feedback</th></tr></thead><tbody>@foreach(var session in Model.Sessions.OrderBy(x => x.StartTime)){<tr><td>@session.StartTime?.ToString("hh\\:mm")-@session.EndTime?.ToString("hh\\:mm")</td><td>@session.Division</td><td>@session.PresenterName</td><td><code>@session.PresenterUsername</code></td><td>@(session.RequiresFeedback ? "Required" : "Not required")</td></tr>}</tbody></table></div>
     }
     else
     {
@@ -58,6 +58,7 @@
                     <div><label asp-for="Sessions[i].PresenterUsername" class="form-label"></label><input asp-for="Sessions[i].PresenterUsername" class="form-control" placeholder="NAMFISA\username" /><span asp-validation-for="Sessions[i].PresenterUsername" class="text-danger"></span></div>
                     <div><label asp-for="Sessions[i].StartTime" class="form-label"></label><input asp-for="Sessions[i].StartTime" class="form-control" type="time" /><span asp-validation-for="Sessions[i].StartTime" class="text-danger"></span></div>
                     <div><label asp-for="Sessions[i].EndTime" class="form-label"></label><input asp-for="Sessions[i].EndTime" class="form-control" type="time" /><span asp-validation-for="Sessions[i].EndTime" class="text-danger"></span></div>
+                    <label class="programme-session-feedback" asp-for="Sessions[i].RequiresFeedback"><input asp-for="Sessions[i].RequiresFeedback" class="form-check-input" /><span><strong>Employee feedback</strong><small>Include in feedback and evaluation</small></span></label>
                     <button class="btn btn-outline-danger remove-programme-session" type="button" aria-label="Remove presentation">Remove</button>
                 </div>
             }
@@ -70,6 +71,7 @@
                 <div><label class="form-label" for="Sessions___index____PresenterUsername">Presenter AD ID</label><input class="form-control" id="Sessions___index____PresenterUsername" name="Sessions[__index__].PresenterUsername" required maxlength="150" placeholder="NAMFISA\username" pattern="^[^\\]+\\[^\\]+$" /></div>
                 <div><label class="form-label" for="Sessions___index____StartTime">Start time</label><input class="form-control" id="Sessions___index____StartTime" name="Sessions[__index__].StartTime" type="time" required /></div>
                 <div><label class="form-label" for="Sessions___index____EndTime">End time</label><input class="form-control" id="Sessions___index____EndTime" name="Sessions[__index__].EndTime" type="time" required /></div>
+                <label class="programme-session-feedback" for="Sessions___index____RequiresFeedback"><input class="form-check-input" id="Sessions___index____RequiresFeedback" name="Sessions[__index__].RequiresFeedback" type="checkbox" value="true" checked /><input name="Sessions[__index__].RequiresFeedback" type="hidden" value="false" /><span><strong>Employee feedback</strong><small>Include in feedback and evaluation</small></span></label>
                 <button class="btn btn-outline-danger remove-programme-session" type="button">Remove</button>
             </div>
         </template>

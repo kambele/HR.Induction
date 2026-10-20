@@ -47,6 +47,8 @@ public class HomeController(
                 x.AppointmentDate,
                 x.Status,
                 x.InductionProgrammeId,
+                ProgrammeRequiresFeedback = x.InductionProgramme != null
+                    && x.InductionProgramme.Sessions.Any(session => session.RequiresFeedback),
                 AttendanceStatus = x.ProgrammeAttendance == null
                     ? ProgrammeAttendanceStatus.Pending
                     : x.ProgrammeAttendance.Status,
@@ -57,7 +59,8 @@ public class HomeController(
 
         var programmeAssigned = analyticsCases.Where(x => x.InductionProgrammeId.HasValue).ToList();
         var presentCount = programmeAssigned.Count(x => x.AttendanceStatus == ProgrammeAttendanceStatus.Present);
-        var feedbackCases = analyticsCases.Where(x => x.HasFeedback).ToList();
+        var feedbackEligibleCases = programmeAssigned.Where(x => x.ProgrammeRequiresFeedback).ToList();
+        var feedbackCases = feedbackEligibleCases.Where(x => x.HasFeedback).ToList();
         var monthlyTrend = Enumerable.Range(0, 6)
             .Select(offset => trendStart.AddMonths(offset))
             .Select(month => new DashboardTrendPoint(
@@ -93,9 +96,9 @@ public class HomeController(
             AttendanceRate = programmeAssigned.Count == 0
                 ? 0
                 : Math.Round(presentCount * 100m / programmeAssigned.Count, 1),
-            FeedbackResponseRate = programmeAssigned.Count == 0
+            FeedbackResponseRate = feedbackEligibleCases.Count == 0
                 ? 0
-                : Math.Round(feedbackCases.Count * 100m / programmeAssigned.Count, 1),
+                : Math.Round(feedbackCases.Count * 100m / feedbackEligibleCases.Count, 1),
             AverageProgrammeRating = feedbackCases.Count == 0
                 ? 0
                 : Math.Round(feedbackCases.Average(x => x.OverallRating!.Value), 2),

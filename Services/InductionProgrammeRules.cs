@@ -4,6 +4,9 @@ namespace Namfisa.Induction.Services;
 
 public static class InductionProgrammeRules
 {
+    public static bool RequiresFeedback(InductionProgramme? programme) =>
+        programme?.Sessions.Any(x => x.RequiresFeedback) == true;
+
     public static DateTime StartsAt(InductionProgramme programme)
     {
         var firstSession = programme.Sessions

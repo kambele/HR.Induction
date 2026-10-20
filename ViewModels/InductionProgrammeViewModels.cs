@@ -52,6 +52,9 @@ public class InductionProgrammeSessionInputModel
 
     [Required, DataType(DataType.Time), Display(Name = "End time")]
     public TimeSpan? EndTime { get; set; }
+
+    [Display(Name = "Employee feedback")]
+    public bool RequiresFeedback { get; set; } = true;
 }
 
 public class InductionProgrammeDetailsViewModel
@@ -93,6 +96,7 @@ public class ProgrammeEmployeeSelectionInputModel
 public class InductionProgrammeReportViewModel
 {
     public required InductionProgramme Programme { get; set; }
+    public bool FeedbackRequired { get; set; }
     public int ParticipantCount { get; set; }
     public int ResponseCount { get; set; }
     public decimal ResponseRate { get; set; }
@@ -116,6 +120,7 @@ public class PresenterProgrammeViewModel
     public bool LockChecklistWhenSignOffStarts { get; set; }
     public bool CanSendAttendanceInvitations { get; set; }
     public bool CanSendFeedbackInvitations { get; set; }
+    public bool FeedbackRequired { get; set; }
     public bool ProgrammeCompleted { get; set; }
     public DateTime ProgrammeStartsAt { get; set; }
     public bool SmtpConfigured { get; set; }

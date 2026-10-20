@@ -29,19 +29,23 @@
             </form>
         }
         <button class="btn btn-primary btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#attendanceInviteModal" disabled="@(!Model.CanSendAttendanceInvitations || attendeesWithEmail == 0 ? "disabled" : null)">Invite employees</button>
-        @if (Model.CanManageChecklist)
+        @if (Model.CanManageChecklist && Model.FeedbackRequired)
         {
             <button class="btn btn-success btn-lg" type="button" data-bs-toggle="modal" data-bs-target="#feedbackInviteModal" disabled="@(!Model.CanSendFeedbackInvitations || feedbackEligible == 0 ? "disabled" : null)">Send feedback links</button>
         }
     </div>
 </section>
 
-@if (Model.ProgrammeCompleted)
+@if (Model.ProgrammeCompleted && Model.FeedbackRequired)
 {
     <div class="alert alert-success d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
         <span><strong>Programme completed.</strong> HRBP can now invite present employees to complete feedback and evaluation.</span>
         <span>@feedbackEligible eligible employee@(feedbackEligible == 1 ? string.Empty : "s")</span>
     </div>
+}
+else if (Model.ProgrammeCompleted)
+{
+    <div class="alert alert-success"><strong>Programme completed.</strong> Employee feedback and evaluation are not required for this programme.</div>
 }
 else if (Model.CanSendAttendanceInvitations)
 {
@@ -49,7 +53,7 @@ else if (Model.CanSendAttendanceInvitations)
 }
 else
 {
-    <div class="alert alert-warning"><strong>Attendance invitations are closed.</strong> Mark all presentations complete to enable HRBP feedback invitations.</div>
+    <div class="alert alert-warning"><strong>Attendance invitations are closed.</strong> @(Model.FeedbackRequired ? "Mark all presentations complete to enable HRBP feedback invitations." : "Mark all presentations complete to close the programme. Employee feedback is not required.")</div>
 }
 
 <section class="row g-3 mb-4">
@@ -114,7 +118,7 @@ else
                 {
                     <div class="programme-agenda-item">
                         <time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time>
-                        <span><strong>@session.Division</strong><small>@session.PresenterName</small><code>@session.PresenterUsername</code></span>
+                        <span><strong>@session.Division</strong><small>@session.PresenterName</small><code>@session.PresenterUsername</code><small>@(session.RequiresFeedback ? "Employee feedback required" : "Employee feedback not required")</small></span>
                         <div class="programme-session-completion">
                             @if (session.CompletedAtUtc.HasValue)
                             {
@@ -282,7 +286,7 @@ else
     </div>
 </div>
 
-@if (Model.CanManageChecklist)
+@if (Model.CanManageChecklist && Model.FeedbackRequired)
 {
     <div class="modal fade" id="feedbackInviteModal" tabindex="-1" aria-labelledby="feedbackInviteTitle" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">

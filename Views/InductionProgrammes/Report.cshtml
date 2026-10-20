@@ -5,6 +5,7 @@
     var divisionData = JsonSerializer.Serialize(Model.DivisionRatings.Select(x => new { division = x.Division, presenter = x.Presenter, average = x.Average, responses = x.Responses }));
     var overallData = JsonSerializer.Serialize(Model.OverallRatingDistribution.Select(x => new { rating = x.Rating, count = x.Count }));
     var timeData = JsonSerializer.Serialize(Model.TimeAllocationDistribution.Select(x => new { label = x.Label, count = x.Count }));
+    var divisionRatings = Model.DivisionRatings.ToDictionary(x => x.Division, StringComparer.OrdinalIgnoreCase);
 }
 @section Styles { <link rel="stylesheet" href="~/lib/c3/c3.min.css" /><link rel="stylesheet" href="~/css/limitless-report.css" asp-append-version="true" /> }
 
@@ -13,11 +14,45 @@
     <a class="btn btn-primary" asp-action="DownloadReport" asp-route-id="@Model.Programme.Id">Download PDF report</a>
 </section>
 
-<section class="limitless-stat-grid"><article><span>Assigned employees</span><strong>@Model.ParticipantCount</strong><small>Programme participants</small></article><article><span>Feedback responses</span><strong>@Model.ResponseCount</strong><small>@Model.ResponseRate% response rate</small></article><article><span>Programme rating</span><strong>@Model.AverageOverallRating.ToString("0.00")</strong><small>Average out of 5</small></article><article><span>Presentation rating</span><strong>@Model.AveragePresentationRating.ToString("0.00")</strong><small>Average out of 5</small></article></section>
+<section class="limitless-stat-grid"><article><span>Assigned employees</span><strong>@Model.ParticipantCount</strong><small>Programme participants</small></article><article><span>Feedback responses</span><strong>@(Model.FeedbackRequired ? Model.ResponseCount.ToString() : "N/A")</strong><small>@(Model.FeedbackRequired ? $"{Model.ResponseRate}% response rate" : "Feedback not required")</small></article><article><span>Programme rating</span><strong>@(Model.FeedbackRequired ? Model.AverageOverallRating.ToString("0.00") : "N/A")</strong><small>@(Model.FeedbackRequired ? "Average out of 5" : "Evaluation not required")</small></article><article><span>Presentation rating</span><strong>@(Model.FeedbackRequired ? Model.AveragePresentationRating.ToString("0.00") : "N/A")</strong><small>@(Model.FeedbackRequired ? "Average out of 5" : "Evaluation not required")</small></article></section>
 
-<div class="row g-4 mb-4"><section class="col-xl-8"><div class="limitless-card"><header><div><h2>Divisional presentation ratings</h2><p>Average employee rating by division and presenter</p></div><span class="chart-library-badge">ECharts</span></header><div id="divisionRatingsChart" class="limitless-chart"></div></div></section><section class="col-xl-4"><div class="limitless-card"><header><div><h2>Overall rating</h2><p>Programme score distribution</p></div><span class="chart-library-badge">C3</span></header><div id="overallRatingChart" class="limitless-chart"></div></div></section></div>
+@if (Model.FeedbackRequired)
+{
+    <div class="row g-4 mb-4"><section class="col-xl-8"><div class="limitless-card"><header><div><h2>Divisional presentation ratings</h2><p>Average employee rating by division and presenter</p></div><span class="chart-library-badge">ECharts</span></header><div id="divisionRatingsChart" class="limitless-chart"></div></div></section><section class="col-xl-4"><div class="limitless-card"><header><div><h2>Overall rating</h2><p>Programme score distribution</p></div><span class="chart-library-badge">C3</span></header><div id="overallRatingChart" class="limitless-chart"></div></div></section></div>
+}
+else
+{
+    <div class="alert alert-info mb-4"><strong>Employee feedback is not required.</strong> The programme schedule remains part of the programme record, but no feedback invitations, evaluation form or rating results are produced.</div>
+}
 
-<div class="row g-4"><section class="col-xl-5"><div class="limitless-card"><header><div><h2>Time allocation</h2><p>Employee view of presentation duration</p></div><span class="chart-library-badge">D3</span></header><div id="timeAllocationChart" class="limitless-chart limitless-chart-compact"></div></div></section><section class="col-xl-7"><div class="limitless-card"><header><div><h2>Programme schedule</h2><p>Published divisional sessions</p></div></header><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Time</th><th>Division</th><th>Presenter</th><th>Average</th></tr></thead><tbody>@foreach(var session in Model.DivisionRatings){var source=Model.Programme.Sessions.First(x=>x.Division==session.Division);<tr><td>@source.StartTime.ToString("hh\\:mm")-@source.EndTime.ToString("hh\\:mm")</td><td>@session.Division</td><td>@session.Presenter</td><td><strong>@(session.Responses == 0 ? "No ratings" : $"{session.Average:0.00}/5")</strong></td></tr>}</tbody></table></div></div></section></div>
+<div class="row g-4">
+    @if (Model.FeedbackRequired)
+    {
+        <section class="col-xl-5"><div class="limitless-card"><header><div><h2>Time allocation</h2><p>Employee view of presentation duration</p></div><span class="chart-library-badge">D3</span></header><div id="timeAllocationChart" class="limitless-chart limitless-chart-compact"></div></div></section>
+    }
+    <section class="@(Model.FeedbackRequired ? "col-xl-7" : "col-12")">
+        <div class="limitless-card">
+            <header><div><h2>Programme schedule</h2><p>Published programme sessions</p></div></header>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead><tr><th>Time</th><th>Division</th><th>Presenter</th><th>Evaluation</th></tr></thead>
+                    <tbody>
+                    @foreach (var session in Model.Programme.Sessions.OrderBy(x => x.SortOrder))
+                    {
+                        divisionRatings.TryGetValue(session.Division, out var rating);
+                        <tr>
+                            <td>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</td>
+                            <td>@session.Division</td>
+                            <td>@session.PresenterName</td>
+                            <td><strong>@(!session.RequiresFeedback ? "Feedback not required" : rating is null || rating.Responses == 0 ? "No ratings" : $"{rating.Average:0.00}/5")</strong></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
 
 <script id="divisionRatingsData" type="application/json">@Html.Raw(divisionData)</script><script id="overallRatingData" type="application/json">@Html.Raw(overallData)</script><script id="timeAllocationData" type="application/json">@Html.Raw(timeData)</script>
 

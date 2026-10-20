@@ -277,11 +277,11 @@
             </div>
             <div class="table-responsive">
                 <table class="table align-middle mb-0 programme-schedule-table">
-                    <thead><tr><th>Time slot</th><th>Division</th><th>Presenter</th></tr></thead>
+                    <thead><tr><th>Time slot</th><th>Division</th><th>Presenter</th><th>Feedback</th></tr></thead>
                     <tbody>
                     @foreach (var session in programme.Sessions.OrderBy(x => x.SortOrder))
                     {
-                        <tr><td><strong>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</strong></td><td>@session.Division</td><td>@session.PresenterName</td></tr>
+                        <tr><td><strong>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</strong></td><td>@session.Division</td><td>@session.PresenterName</td><td>@(session.RequiresFeedback ? "Required" : "Not required")</td></tr>
                     }
                     </tbody>
                 </table>
@@ -304,7 +304,7 @@
                 <div class="card-heading">
                     <div>
                         <h3>Corporate induction programme feedback</h3>
-                        <p>Rate every divisional presentation and the overall programme.</p>
+                        <p>Rate the applicable presentations and the overall programme.</p>
                     </div>
                 </div>
                 @if (induction.EmployeeFeedback is not null)
@@ -340,7 +340,7 @@
                 {
                     <div class="empty-state">
                         <h3>Feedback form is ready</h3>
-                        <p>Rate every divisional presentation and the overall programme on the dedicated employee form.</p>
+                        <p>Rate the applicable presentations and the overall programme on the dedicated employee form.</p>
                         <a class="btn btn-primary" asp-action="Feedback" asp-route-id="@(induction.AccessToken.ToString("N"))">Open feedback form</a>
                     </div>
                 }
@@ -350,6 +350,10 @@
                         @if (induction.InductionProgramme is null)
                         {
                             <p>An induction programme must be assigned before feedback can be submitted.</p>
+                        }
+                        else if (!Namfisa.Induction.Services.InductionProgrammeRules.RequiresFeedback(induction.InductionProgramme))
+                        {
+                            <p>Employee feedback and evaluation are not required for this programme.</p>
                         }
                         else if (!Namfisa.Induction.Services.InductionProgrammeRules.IsCompleted(induction.InductionProgramme))
                         {

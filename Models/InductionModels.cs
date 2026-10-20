@@ -318,6 +318,7 @@ public class InductionProgrammeSession
     public TimeSpan StartTime { get; set; }
     public TimeSpan EndTime { get; set; }
     public int SortOrder { get; set; }
+    public bool RequiresFeedback { get; set; } = true;
 
     public DateTime? CompletedAtUtc { get; set; }
 

@@ -22,9 +22,10 @@
                 @foreach (var programme in Model)
                 {
                     var responses = programme.Participants.Count(x => x.EmployeeFeedback?.OverallProgrammeRating is not null);
+                    var feedbackRequired = Namfisa.Induction.Services.InductionProgrammeRules.RequiresFeedback(programme);
                     <tr>
                         <td><strong>@programme.Title</strong><span class="subtext">@programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy") · @(programme.Venue ?? "Venue to be confirmed")</span></td>
-                        <td>@programme.Sessions.Count</td><td>@programme.Participants.Count</td><td>@responses / @programme.Participants.Count</td>
+                        <td>@programme.Sessions.Count</td><td>@programme.Participants.Count</td><td>@(feedbackRequired ? $"{responses} / {programme.Participants.Count}" : "Not required")</td>
                         <td><span class="programme-status programme-status-@programme.Status.ToString().ToLowerInvariant()">@programme.Status</span></td>
                         <td class="text-end"><div class="btn-group btn-group-sm"><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@programme.Id">Open</a><a class="btn btn-outline-primary" asp-action="Report" asp-route-id="@programme.Id">Report</a></div></td>
                     </tr>
