@@ -64,5 +64,9 @@
         {
             <p class="audit-line mt-4">Last confirmed by @Model.ProgrammeAttendance.ConfirmedBy on @confirmedAt.ToString("dd MMM yyyy HH:mm") UTC via @Model.ProgrammeAttendance.ConfirmationSource.</p>
         }
+        @if (Model.ProgrammeAttendance?.CalendarInvitationSentAtUtc is DateTime calendarSentAt)
+        {
+            <p class="audit-line">Outlook calendar invitation sent to @Model.ProgrammeAttendance.CalendarInvitationSentTo on @calendarSentAt.ToString("dd MMM yyyy HH:mm") UTC.</p>
+        }
     </div>
 </div>

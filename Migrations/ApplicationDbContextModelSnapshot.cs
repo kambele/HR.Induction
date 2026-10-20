@@ -517,6 +517,17 @@ namespace Namfisa.Induction.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<DateTime?>("CalendarInvitationSentAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CalendarInvitationSentBy")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("CalendarInvitationSentTo")
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
                     b.Property<string>("ConfirmationSource")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
