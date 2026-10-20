@@ -136,7 +136,7 @@ public class InductionProgrammesController(
         await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
         var missing = selectedIds.Length - inductions.Count;
         TempData[assigned > 0 ? "Success" : "Error"] = assigned > 0
-            ? $"{assigned} employee induction{(assigned == 1 ? " was" : "s were")} added to {programme.Title}. Use Apply selected phases to update their checklists."
+            ? $"{assigned} employee induction{(assigned == 1 ? " was" : "s were")} added to {programme.Title}. Use Update all employee checklists to apply the programme phases."
             : "No employee inductions were added.";
         if (protectedRecords + missing > 0)
         {
@@ -152,26 +152,19 @@ public class InductionProgrammesController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ApplyChecklistPhases(ProgrammeEmployeeSelectionInputModel model)
+    public async Task<IActionResult> ApplyChecklistPhasesToAll(int programmeId, bool returnToPresenter = false)
     {
         if (!accessService.IsHr(User)) return Forbid();
         var programme = await dbContext.InductionProgrammes
             .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
+            .SingleOrDefaultAsync(x => x.Id == programmeId, HttpContext.RequestAborted);
         if (programme is null) return NotFound();
-
-        var selectedIds = (model.InductionCaseIds ?? []).Distinct().Take(500).ToArray();
-        if (selectedIds.Length == 0)
-        {
-            TempData["Error"] = "Select at least one assigned employee induction.";
-            return RedirectToAction(nameof(Details), new { id = model.ProgrammeId });
-        }
 
         var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
         var inductions = await dbContext.InductionCases
             .Include(x => x.Tasks)
             .Include(x => x.SignOffs)
-            .Where(x => selectedIds.Contains(x.Id) && x.InductionProgrammeId == model.ProgrammeId)
+            .Where(x => x.InductionProgrammeId == programmeId)
             .ToListAsync(HttpContext.RequestAborted);
 
         var updated = 0;
@@ -196,16 +189,19 @@ public class InductionProgrammesController(
         }
 
         await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
-        var unavailable = selectedIds.Length - inductions.Count;
         TempData[updated > 0 ? "Success" : "Error"] = updated > 0
             ? $"Programme phases applied to {updated} employee induction{(updated == 1 ? string.Empty : "s")}. Checklist changes: {addedTasks} added, {includedTasks} restored and {excludedTasks} excluded."
-            : "No employee induction checklists were updated.";
-        if (protectedRecords + unavailable > 0)
+            : inductions.Count == 0
+                ? "No employees are assigned to this programme."
+                : "No employee induction checklists were updated.";
+        if (protectedRecords > 0)
         {
-            TempData["Warning"] = $"{protectedRecords + unavailable} selected record{(protectedRecords + unavailable == 1 ? " was" : "s were")} skipped because sign-off had started or it was no longer assigned to this programme.";
+            TempData["Warning"] = $"{protectedRecords} employee induction{(protectedRecords == 1 ? " was" : "s were")} skipped because sign-off had started.";
         }
 
-        return RedirectToAction(nameof(Details), new { id = model.ProgrammeId });
+        return returnToPresenter
+            ? RedirectToAction(nameof(PresentersController.Programme), "Presenters", new { id = programmeId })
+            : RedirectToAction(nameof(Details), new { id = programmeId });
     }
 
     [HttpGet]

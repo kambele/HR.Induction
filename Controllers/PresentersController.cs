@@ -11,6 +11,8 @@ namespace Namfisa.Induction.Controllers;
 public class PresentersController(
     ApplicationDbContext dbContext,
     IUserAccessService accessService,
+    IInductionWorkflowService workflowService,
+    IWorkflowConfigurationService workflowConfigurationService,
     IInductionEmailService emailService,
     ILogger<PresentersController> logger) : Controller
 {
@@ -45,7 +47,117 @@ public class PresentersController(
         if (programme is null) return NotFound();
         if (!accessService.CanManageProgrammeAttendance(User, programme)) return Forbid();
 
-        return View(BuildProgrammeModel(programme));
+        return View(await BuildProgrammeModelAsync(programme));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdatePresentationCompletion(UpdateProgrammeSessionCompletionViewModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+
+        var session = await dbContext.InductionProgrammeSessions
+            .SingleOrDefaultAsync(
+                x => x.Id == model.SessionId && x.InductionProgrammeId == model.ProgrammeId,
+                HttpContext.RequestAborted);
+        if (session is null) return NotFound();
+
+        session.CompletedAtUtc = model.IsCompleted ? DateTime.UtcNow : null;
+        session.CompletedBy = model.IsCompleted ? accessService.CurrentUsername(User) : null;
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+
+        TempData["Success"] = model.IsCompleted
+            ? $"{session.Division} presentation marked complete."
+            : $"{session.Division} presentation reopened.";
+        return RedirectToAction(nameof(Programme), new { id = model.ProgrammeId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpdateProgrammeChecklistItem(UpdateProgrammeChecklistItemViewModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+        if (!ModelState.IsValid || !model.Status.HasValue)
+        {
+            TempData["Error"] = "Select a valid checklist status and use DOMAIN\\username when entering an assignee.";
+            return RedirectToAction(nameof(Programme), new { id = model.ProgrammeId });
+        }
+        if (model.Status == InductionTaskStatus.NotApplicable && string.IsNullOrWhiteSpace(model.Notes))
+        {
+            TempData["Error"] = "Add a reason before marking a checklist activity not applicable.";
+            return RedirectToAction(nameof(Programme), new { id = model.ProgrammeId });
+        }
+
+        var programme = await dbContext.InductionProgrammes
+            .AsSplitQuery()
+            .Include(x => x.ChecklistPhases)
+            .Include(x => x.Participants)
+                .ThenInclude(x => x.Tasks)
+            .Include(x => x.Participants)
+                .ThenInclude(x => x.SignOffs)
+            .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
+        if (programme is null) return NotFound();
+
+        var applicablePhases = programme.ChecklistPhases.Count == 0
+            ? Enum.GetValues<InductionPhase>().ToHashSet()
+            : programme.ChecklistPhases.Select(x => x.Phase).ToHashSet();
+        var template = await dbContext.ChecklistTemplateItems
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                x => x.Id == model.ChecklistTemplateItemId
+                     && x.IsActive
+                     && applicablePhases.Contains(x.Phase),
+                HttpContext.RequestAborted);
+        if (template is null)
+        {
+            TempData["Error"] = "The checklist activity is not active for this programme.";
+            return RedirectToAction(nameof(Programme), new { id = model.ProgrammeId });
+        }
+
+        var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
+        var username = accessService.CurrentUsername(User);
+        var updated = 0;
+        var protectedRecords = 0;
+        foreach (var induction in programme.Participants)
+        {
+            if (settings.LockChecklistWhenSignOffStarts && induction.SignOffs.Count > 0)
+            {
+                protectedRecords++;
+                continue;
+            }
+
+            await workflowService.RefreshTasksFromProgrammeAsync(induction, HttpContext.RequestAborted);
+            var task = induction.Tasks.FirstOrDefault(x =>
+                x.ChecklistTemplateItemId == model.ChecklistTemplateItemId
+                && !x.ExcludedByProgramme);
+            if (task is null) continue;
+
+            task.Status = model.Status.Value;
+            task.Notes = string.IsNullOrWhiteSpace(model.Notes) ? null : model.Notes.Trim();
+            if (!string.IsNullOrWhiteSpace(model.AssignedToUsername))
+            {
+                task.AssignedToUsername = model.AssignedToUsername.Trim();
+            }
+            if (model.DueDate.HasValue)
+            {
+                task.DueDate = model.DueDate.Value.Date;
+            }
+            task.CompletedBy = model.Status == InductionTaskStatus.NotStarted ? null : username;
+            task.CompletedAtUtc = model.Status == InductionTaskStatus.NotStarted ? null : DateTime.UtcNow;
+            await workflowService.RefreshStatusAsync(induction, HttpContext.RequestAborted);
+            updated++;
+        }
+
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+        TempData[updated > 0 ? "Success" : "Error"] = updated > 0
+            ? $"{template.Title} updated for {updated} employee induction{(updated == 1 ? string.Empty : "s")}."
+            : "No employee induction checklist was updated.";
+        if (protectedRecords > 0)
+        {
+            TempData["Warning"] = $"{protectedRecords} employee induction{(protectedRecords == 1 ? " was" : "s were")} skipped because sign-off had started.";
+        }
+
+        return RedirectToAction(nameof(Programme), new { id = model.ProgrammeId });
     }
 
     [HttpPost]
@@ -165,28 +277,68 @@ public class PresentersController(
         .AsNoTracking()
         .AsSplitQuery()
         .Include(x => x.Sessions)
+        .Include(x => x.ChecklistPhases)
         .Include(x => x.Participants)
             .ThenInclude(x => x.ProgrammeAttendance)
+        .Include(x => x.Participants)
+            .ThenInclude(x => x.Tasks)
+        .Include(x => x.Participants)
+            .ThenInclude(x => x.SignOffs)
         .Include(x => x.Attendances);
 
-    private PresenterProgrammeViewModel BuildProgrammeModel(InductionProgramme programme) => new()
+    private async Task<PresenterProgrammeViewModel> BuildProgrammeModelAsync(InductionProgramme programme)
     {
-        Programme = programme,
-        SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,
-        SmtpSummary = emailService.ConfigurationStatus.Summary,
-        Attendees = programme.Participants
-            .OrderBy(x => x.EmployeeName)
-            .Select(induction => new PresenterAttendeeViewModel
+        var settings = await workflowConfigurationService.GetAsync(HttpContext.RequestAborted);
+        var applicablePhases = programme.ChecklistPhases.Count == 0
+            ? Enum.GetValues<InductionPhase>().ToHashSet()
+            : programme.ChecklistPhases.Select(x => x.Phase).ToHashSet();
+        var templates = await dbContext.ChecklistTemplateItems
+            .AsNoTracking()
+            .Where(x => x.IsActive && applicablePhases.Contains(x.Phase))
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(HttpContext.RequestAborted);
+
+        return new PresenterProgrammeViewModel
+        {
+            Programme = programme,
+            CanManageChecklist = accessService.IsHr(User),
+            LockChecklistWhenSignOffStarts = settings.LockChecklistWhenSignOffStarts,
+            SmtpConfigured = emailService.ConfigurationStatus.IsConfigured,
+            SmtpSummary = emailService.ConfigurationStatus.Summary,
+            Attendees = programme.Participants
+                .OrderBy(x => x.EmployeeName)
+                .Select(induction => new PresenterAttendeeViewModel
+                {
+                    Induction = induction,
+                    Status = induction.ProgrammeAttendance?.Status ?? ProgrammeAttendanceStatus.Pending,
+                    ConfirmedAtUtc = induction.ProgrammeAttendance?.ConfirmedAtUtc,
+                    ConfirmedBy = induction.ProgrammeAttendance?.ConfirmedBy,
+                    ConfirmationSource = induction.ProgrammeAttendance?.ConfirmationSource,
+                    InvitationSentAtUtc = induction.ProgrammeAttendance?.InvitationSentAtUtc
+                })
+                .ToList(),
+            ChecklistItems = templates.Select(template =>
             {
-                Induction = induction,
-                Status = induction.ProgrammeAttendance?.Status ?? ProgrammeAttendanceStatus.Pending,
-                ConfirmedAtUtc = induction.ProgrammeAttendance?.ConfirmedAtUtc,
-                ConfirmedBy = induction.ProgrammeAttendance?.ConfirmedBy,
-                ConfirmationSource = induction.ProgrammeAttendance?.ConfirmationSource,
-                InvitationSentAtUtc = induction.ProgrammeAttendance?.InvitationSentAtUtc
-            })
-            .ToList()
-    };
+                var tasks = programme.Participants
+                    .SelectMany(x => x.Tasks)
+                    .Where(x => x.ChecklistTemplateItemId == template.Id && !x.ExcludedByProgramme)
+                    .ToList();
+                return new PresenterChecklistItemViewModel
+                {
+                    ChecklistTemplateItemId = template.Id,
+                    Section = template.Section,
+                    Title = template.Title,
+                    Phase = template.Phase,
+                    ResponsibleRole = template.ResponsibleRole,
+                    SortOrder = template.SortOrder,
+                    ParticipantCount = programme.Participants.Count,
+                    EmployeeTaskCount = tasks.Count,
+                    CompletedCount = tasks.Count(x => x.Status == InductionTaskStatus.Completed),
+                    NotApplicableCount = tasks.Count(x => x.Status == InductionTaskStatus.NotApplicable)
+                };
+            }).ToList()
+        };
+    }
 
     private ProgrammeAttendance GetOrCreateAttendance(InductionProgramme programme, InductionCase induction)
     {

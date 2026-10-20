@@ -600,6 +600,8 @@ public class InductionsController(
         string? assignedToUsername,
         DateTime? dueDate)
     {
+        if (!accessService.IsHr(User)) return Forbid();
+
         var task = await dbContext.InductionTasks
             .AsSplitQuery()
             .Include(x => x.InductionCase)
@@ -614,8 +616,6 @@ public class InductionsController(
             TempData["Error"] = "This checklist item is not applicable to the assigned induction programme.";
             return RedirectToDetails(task.InductionCase);
         }
-        if (!accessService.CanComplete(User, task)) return Forbid();
-
         var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
         if (settings.LockChecklistWhenSignOffStarts && task.InductionCase.SignOffs.Count != 0)
         {

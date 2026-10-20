@@ -367,6 +367,7 @@ textarea.form-control { min-height: auto; }
 .programme-participant-list small, .programme-participant-list a > span:last-child { margin-top: .15rem; color: var(--muted); font-size: .78rem; }
 .programme-employee-list { display: grid; max-height: 430px; overflow-y: auto; border: 1px solid var(--line); border-radius: .75rem; }
 .programme-employee-row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: .8rem; padding: .85rem; border-bottom: 1px solid var(--line); }
+.programme-employee-row-static { grid-template-columns: minmax(0,1fr) auto; }
 .programme-employee-row:last-child { border-bottom: 0; }
 .programme-employee-row.is-protected { background: #f7f8f7; }
 .programme-employee-copy { min-width: 0; cursor: pointer; }
@@ -415,11 +416,31 @@ textarea.form-control { min-height: auto; }
 .metric-danger { border-top-color: #bd4438; }
 .metric-danger strong { color: #9d2f24; }
 .programme-agenda-list { display: grid; gap: .55rem; }
-.programme-agenda-list > div { display: grid; grid-template-columns: 105px 1fr; gap: .8rem; align-items: start; padding: .7rem 0; border-bottom: 1px solid #edf1ed; }
+.programme-agenda-list > div { display: grid; grid-template-columns: 105px minmax(0,1fr) auto; gap: .8rem; align-items: start; padding: .7rem 0; border-bottom: 1px solid #edf1ed; }
 .programme-agenda-list > div:last-child { border-bottom: 0; }
 .programme-agenda-list time { color: var(--green-800); font-weight: 800; }
 .programme-agenda-list span, .programme-agenda-list strong, .programme-agenda-list small, .programme-agenda-list code { display: block; }
 .programme-agenda-list small, .programme-agenda-list code { margin-top: .15rem; color: var(--muted); font-size: .76rem; }
+.programme-session-completion { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; text-align: right; }
+.programme-session-completion small { max-width: 155px; overflow-wrap: anywhere; }
+.programme-global-phase-stack { display: grid; gap: 1rem; }
+.programme-global-phase { overflow: hidden; border: 1px solid var(--line); border-radius: .8rem; }
+.programme-global-phase-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem 1rem; color: #fff; background: var(--green-900); }
+.programme-global-phase-heading h3 { margin: 0; font-size: 1rem; }
+.programme-global-phase-heading span { font-size: .75rem; font-weight: 700; opacity: .78; }
+.programme-global-task-list { display: grid; }
+.programme-global-task { padding: 1rem; border-top: 1px solid var(--line); }
+.programme-global-task:first-child { border-top: 0; }
+.programme-global-task-summary { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.programme-global-task-summary strong, .programme-global-task-summary span, .programme-global-task-summary small { display: block; }
+.programme-global-task-summary > div:first-child > span, .programme-global-task-summary > div:first-child > small { margin-top: .2rem; color: var(--muted); font-size: .76rem; }
+.programme-global-task-counts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; }
+.programme-global-task-editor { margin-top: .75rem; }
+.programme-global-task-editor > summary { width: fit-content; list-style: none; }
+.programme-global-task-editor > summary::-webkit-details-marker { display: none; }
+.programme-global-task-form { display: grid; grid-template-columns: minmax(150px,.7fr) minmax(220px,1.2fr) minmax(210px,1fr) minmax(160px,.7fr) auto; align-items: start; gap: .8rem; margin-top: .8rem; padding: 1rem; border-radius: .75rem; background: #f5f8f5; }
+.attendance-invitation-modal { max-height: calc(100vh - 2rem); }
+.attendance-invitation-modal .modal-body { min-height: 0; overflow-y: auto; }
 .attendance-confirm-shell { max-width: 820px; margin: 0 auto; }
 .attendance-confirm-card h2 { margin: 1.1rem 0 .25rem; }
 .attendance-employee { color: var(--muted); }
@@ -464,6 +485,7 @@ textarea.form-control { min-height: auto; }
   .programme-phase-badges { justify-content: flex-start; }
   .programme-summary-bar, .invitation-selection-toolbar { align-items: flex-start; flex-direction: column; }
   .programme-employee-row { grid-template-columns: auto minmax(0,1fr); }
+  .programme-employee-row-static { grid-template-columns: minmax(0,1fr) auto; }
   .programme-employee-action { grid-column: 2; align-items: flex-start; text-align: left; }
   .programme-selection-footer, .programme-assignment-toolbar { align-items: stretch; flex-direction: column; }
   .programme-assignment-toolbar > div:last-child { align-items: stretch !important; flex-direction: column; }
@@ -487,6 +509,11 @@ textarea.form-control { min-height: auto; }
   .card-heading, .section-heading { align-items: flex-start; flex-direction: column; }
   .attendance-summary-strip { grid-template-columns: 1fr 1fr; }
   .attendance-choice-grid, .programme-facts { grid-template-columns: 1fr; }
+  .programme-agenda-list > div { grid-template-columns: 1fr; }
+  .programme-session-completion { align-items: flex-start; text-align: left; }
+  .programme-global-task-summary { align-items: flex-start; flex-direction: column; }
+  .programme-global-task-counts { justify-content: flex-start; }
+  .programme-global-task-form { grid-template-columns: 1fr; }
   .programme-facts div { padding: .7rem 0; border-left: 0; border-top: 1px solid var(--line); }
   .programme-facts div:first-child { border-top: 0; }
   .feedback-programme-summary { position: static; }

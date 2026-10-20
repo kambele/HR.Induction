@@ -319,6 +319,11 @@ public class InductionProgrammeSession
     public TimeSpan EndTime { get; set; }
     public int SortOrder { get; set; }
 
+    public DateTime? CompletedAtUtc { get; set; }
+
+    [StringLength(150)]
+    public string? CompletedBy { get; set; }
+
     public ICollection<PresentationRating> Ratings { get; set; } = [];
 }
 

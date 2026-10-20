@@ -111,8 +111,57 @@ public class PresenterProgrammeViewModel
 {
     public required InductionProgramme Programme { get; set; }
     public required IReadOnlyList<PresenterAttendeeViewModel> Attendees { get; set; }
+    public IReadOnlyList<PresenterChecklistItemViewModel> ChecklistItems { get; set; } = [];
+    public bool CanManageChecklist { get; set; }
+    public bool LockChecklistWhenSignOffStarts { get; set; }
     public bool SmtpConfigured { get; set; }
     public string SmtpSummary { get; set; } = string.Empty;
+}
+
+public class PresenterChecklistItemViewModel
+{
+    public int ChecklistTemplateItemId { get; set; }
+    public string Section { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public InductionPhase Phase { get; set; }
+    public string ResponsibleRole { get; set; } = string.Empty;
+    public int SortOrder { get; set; }
+    public int ParticipantCount { get; set; }
+    public int EmployeeTaskCount { get; set; }
+    public int CompletedCount { get; set; }
+    public int NotApplicableCount { get; set; }
+}
+
+public class UpdateProgrammeChecklistItemViewModel
+{
+    [Required]
+    public int ProgrammeId { get; set; }
+
+    [Required]
+    public int ChecklistTemplateItemId { get; set; }
+
+    [Required]
+    public InductionTaskStatus? Status { get; set; }
+
+    [StringLength(1000)]
+    public string? Notes { get; set; }
+
+    [StringLength(150), RegularExpression(@"^[^\\]+\\[^\\]+$", ErrorMessage = "Use the AD ID format DOMAIN\\username.")]
+    public string? AssignedToUsername { get; set; }
+
+    [DataType(DataType.Date)]
+    public DateTime? DueDate { get; set; }
+}
+
+public class UpdateProgrammeSessionCompletionViewModel
+{
+    [Required]
+    public int ProgrammeId { get; set; }
+
+    [Required]
+    public int SessionId { get; set; }
+
+    public bool IsCompleted { get; set; }
 }
 
 public class PresenterAttendeeViewModel

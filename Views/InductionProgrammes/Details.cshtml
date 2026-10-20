@@ -36,7 +36,7 @@
     <div>
         <p class="eyebrow mb-1">Employee checklist</p>
         <h2>Applicable phases</h2>
-        <p>These phases can be applied to the selected employee induction checklists below.</p>
+        <p>These phases can be applied to every employee induction assigned to this programme.</p>
     </div>
     <div class="programme-phase-badges">
         @foreach (var phase in checklistPhases)
@@ -69,12 +69,12 @@
     </section>
 
     <section class="col-xl-5">
-        <form class="content-card h-100" asp-action="ApplyChecklistPhases" method="post" id="applyProgrammePhasesForm">
-            <input type="hidden" name="ProgrammeId" value="@programme.Id" />
+        <form class="content-card h-100" asp-action="ApplyChecklistPhasesToAll" method="post">
+            <input type="hidden" name="programmeId" value="@programme.Id" />
             <div class="card-heading">
                 <div>
                     <h2>Assigned employees</h2>
-                    <p>Select employees to update their checklists with the programme phases.</p>
+                    <p>Review participants, then update every available checklist in one action.</p>
                 </div>
             </div>
 
@@ -84,23 +84,15 @@
             }
             else
             {
-                <div class="invitation-selection-toolbar">
-                    <div class="form-check mb-0">
-                        <input class="form-check-input" id="selectAllProgrammeParticipants" type="checkbox" disabled="@(refreshableEmployees == 0 ? "disabled" : null)" />
-                        <label class="form-check-label" for="selectAllProgrammeParticipants">Select all available</label>
-                    </div>
-                    <span id="programmeParticipantSelectedCount">0 selected</span>
-                </div>
                 <div class="programme-employee-list">
                     @foreach (var employee in Model.AssignedEmployees)
                     {
-                        <div class="programme-employee-row @(!employee.CanApplyPhases ? "is-protected" : string.Empty)">
-                            <input class="form-check-input programme-participant-checkbox" type="checkbox" name="InductionCaseIds" value="@employee.Id" id="programme-participant-@employee.Id" disabled="@(!employee.CanApplyPhases ? "disabled" : null)" />
-                            <label class="programme-employee-copy" for="programme-participant-@employee.Id">
+                        <div class="programme-employee-row programme-employee-row-static @(!employee.CanApplyPhases ? "is-protected" : string.Empty)">
+                            <div class="programme-employee-copy">
                                 <strong>@employee.EmployeeName</strong>
                                 <span>@employee.Department · @employee.Division</span>
                                 <small>@employee.ApplicableTaskCount applicable of @employee.TotalTaskCount checklist tasks</small>
-                            </label>
+                            </div>
                             <div class="programme-employee-action">
                                 @if (!employee.CanApplyPhases)
                                 {
@@ -116,8 +108,8 @@
                     }
                 </div>
                 <div class="programme-selection-footer">
-                    <p>This keeps completed task results and only adds, restores or excludes tasks to match the selected phases.</p>
-                    <button class="btn btn-primary" id="applyProgrammePhases" type="submit" disabled>Apply selected phases</button>
+                    <p>This keeps completed task results and adds, restores or excludes tasks to match the selected phases. Signed records remain protected.</p>
+                    <button class="btn btn-primary" type="submit" disabled="@(refreshableEmployees == 0 ? "disabled" : null)">Update all employee checklists</button>
                 </div>
             }
         </form>
@@ -220,7 +212,6 @@
                 refresh();
             };
 
-            initialiseSelection('.programme-participant-checkbox', 'selectAllProgrammeParticipants', 'programmeParticipantSelectedCount', 'applyProgrammePhases');
             initialiseSelection('.programme-assignment-checkbox', 'selectAllAssignableEmployees', 'assignProgrammeSelectedCount', 'assignProgrammeEmployees');
         })();
     </script>

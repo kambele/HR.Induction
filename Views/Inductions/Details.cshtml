@@ -3,7 +3,6 @@
 @{
     ViewData["Title"] = Model.Induction.EmployeeName;
     var induction = Model.Induction;
-    var currentUsername = AccessService.CurrentUsername(User);
     var locked = Model.LockChecklistWhenSignOffStarts && induction.SignOffs.Count > 0;
     var checklistTasks = induction.Tasks.Where(x => !x.ExcludedByProgramme).ToList();
     var mandatoryComplete = checklistTasks.Where(x => x.IsMandatory)
@@ -205,7 +204,7 @@
                         @foreach (var task in phaseGroup)
                         {
                             var overdue = task.Status == InductionTaskStatus.NotStarted && task.DueDate.Date < DateTime.Today;
-                            var canComplete = Model.CanManage || string.Equals(task.AssignedToUsername, currentUsername, StringComparison.OrdinalIgnoreCase);
+                            var canComplete = Model.CanManage;
                             <tr class="@(overdue ? "task-overdue" : null)">
                                 <td>
                                     <strong>@task.Title</strong>
