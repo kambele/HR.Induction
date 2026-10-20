@@ -1,0 +1,167 @@
+@model ProgrammeRecordAdministrationViewModel
+@{
+    ViewData["Title"] = "Induction programme records";
+    var deletableCount = Model.Items.Count(x => x.CanDelete);
+    var protectedCount = Model.Items.Count - deletableCount;
+}
+
+<section class="page-heading compact-heading">
+    <a class="back-link" asp-action="Index">&larr; Back to administration</a>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3">
+        <div>
+            <p class="eyebrow">Administration</p>
+            <h1>Induction programme records</h1>
+            <p class="lead-copy">Permanently remove obsolete programmes while retaining the employee induction records previously assigned to them.</p>
+        </div>
+        <a class="btn btn-primary" asp-controller="InductionProgrammes" asp-action="Create">Create programme</a>
+    </div>
+</section>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="metric-card"><span class="metric-label">Induction programmes</span><strong>@Model.TotalProgrammes</strong><span class="metric-note">All programme records</span></div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card metric-success"><span class="metric-label">Assigned employees</span><strong>@Model.AssignedEmployees</strong><span class="metric-note">Inductions linked to programmes</span></div>
+    </div>
+    <div class="col-md-4">
+        <div class="metric-card metric-gold"><span class="metric-label">Protected programmes</span><strong>@protectedCount</strong><span class="metric-note">Feedback must be cleared first</span></div>
+    </div>
+</div>
+
+<form method="get" class="content-card admin-filter-bar mb-4">
+    <div class="admin-record-search">
+        <label class="form-label" for="search">Search programmes</label>
+        <input class="form-control" id="search" name="search" value="@Model.Search" placeholder="Programme title or venue" />
+    </div>
+    <button class="btn btn-outline-primary" type="submit">Search</button>
+    <a class="btn btn-outline-secondary" asp-action="ProgrammeRecords">Clear</a>
+</form>
+
+<form id="programmeRecordsForm" asp-action="DeleteInductionProgrammes" method="post">
+    <input type="hidden" name="ReturnSearch" value="@Model.Search" />
+    <div class="content-card p-0 overflow-hidden">
+        <div class="employee-record-actions">
+            <div>
+                <strong>Manage selected programmes</strong>
+                <span id="programmeRecordSelectedCount">0 selected</span>
+            </div>
+            <button class="btn btn-danger" id="openDeleteProgrammesModal" type="button" data-bs-toggle="modal" data-bs-target="#deleteProgrammesModal" disabled>Delete programmes</button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 admin-table employee-record-table">
+                <thead>
+                    <tr>
+                        <th class="employee-record-check"><input class="form-check-input" id="selectAllProgrammeRecords" type="checkbox" aria-label="Select all removable induction programmes" disabled="@(deletableCount == 0 ? "disabled" : null)" /></th>
+                        <th>Programme</th>
+                        <th>Date and venue</th>
+                        <th>Status</th>
+                        <th>Schedule</th>
+                        <th>Employees</th>
+                        <th>Deletion status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                @if (Model.Items.Count == 0)
+                {
+                    <tr><td colspan="8"><div class="empty-state">No induction programmes match the search.</div></td></tr>
+                }
+                else
+                {
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr class="@(!item.CanDelete ? "admin-row-inactive" : null)">
+                            <td class="employee-record-check">
+                                <input class="form-check-input programme-record-checkbox" type="checkbox" name="ProgrammeIds" value="@item.Id" id="programme-record-@item.Id" aria-label="Select @item.Title" disabled="@(!item.CanDelete ? "disabled" : null)" />
+                            </td>
+                            <td><label for="programme-record-@item.Id"><strong>@item.Title</strong></label></td>
+                            <td><strong>@item.ProgrammeDate.ToString("dd MMM yyyy")</strong><span class="subtext">@(item.Venue ?? "Venue not specified")</span></td>
+                            <td><span class="programme-status programme-status-@item.Status.ToString().ToLowerInvariant()">@item.Status</span></td>
+                            <td>@item.SessionCount presentation@(item.SessionCount == 1 ? string.Empty : "s")</td>
+                            <td>@item.ParticipantCount assigned</td>
+                            <td>
+                                @if (item.CanDelete)
+                                {
+                                    <span class="admin-status is-active">Available to delete</span>
+                                }
+                                else
+                                {
+                                    <span class="admin-status is-inactive">Feedback retained</span>
+                                    <span class="subtext">@item.FeedbackResponseCount response@(item.FeedbackResponseCount == 1 ? string.Empty : "s"), @item.PresentationRatingCount rating@(item.PresentationRatingCount == 1 ? string.Empty : "s")</span>
+                                }
+                            </td>
+                            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" asp-controller="InductionProgrammes" asp-action="Details" asp-route-id="@item.Id">Open</a></td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteProgrammesModal" tabindex="-1" aria-labelledby="deleteProgrammesModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content invitation-modal">
+                <div class="modal-header">
+                    <div><p class="eyebrow mb-1 text-danger">Permanent removal</p><h2 class="modal-title fs-4" id="deleteProgrammesModalTitle">Delete induction programmes?</h2></div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>This will permanently remove <strong id="deleteProgrammeSelectionCount">0 selected programmes</strong>, including schedules, configured checklist phases, and attendance records.</p>
+                    <div class="alert alert-warning">Employee induction records will be retained, but their programme assignment will be cleared.</div>
+                    <div class="alert alert-danger">This action cannot be undone.</div>
+                    <label class="form-label" for="deleteProgrammeConfirmationText">Type <strong>DELETE</strong> to confirm</label>
+                    <input class="form-control" id="deleteProgrammeConfirmationText" name="ConfirmationText" autocomplete="off" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-danger" id="confirmDeleteProgrammes" type="submit" disabled>Delete permanently</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (protectedCount > 0)
+{
+    <div class="alert alert-info mt-4 mb-0">Programmes with submitted feedback cannot be deleted. Use <a asp-action="EmployeeRecords">Employee induction records</a> to clear the affected feedback first.</div>
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const checkboxes = [...document.querySelectorAll('.programme-record-checkbox:not(:disabled)')];
+            const selectAll = document.getElementById('selectAllProgrammeRecords');
+            const selectedCount = document.getElementById('programmeRecordSelectedCount');
+            const openDelete = document.getElementById('openDeleteProgrammesModal');
+            const modalCount = document.getElementById('deleteProgrammeSelectionCount');
+            const confirmation = document.getElementById('deleteProgrammeConfirmationText');
+            const confirmDelete = document.getElementById('confirmDeleteProgrammes');
+            if (!selectAll || !selectedCount || !openDelete || !modalCount || !confirmation || !confirmDelete) return;
+
+            const refresh = () => {
+                const selected = checkboxes.filter(item => item.checked).length;
+                selectedCount.textContent = `${selected} selected`;
+                modalCount.textContent = `${selected} selected programme${selected === 1 ? '' : 's'}`;
+                openDelete.disabled = selected === 0;
+                selectAll.checked = checkboxes.length > 0 && selected === checkboxes.length;
+                selectAll.indeterminate = selected > 0 && selected < checkboxes.length;
+                confirmDelete.disabled = selected === 0 || confirmation.value.trim() !== 'DELETE';
+            };
+
+            selectAll.addEventListener('change', () => {
+                checkboxes.forEach(item => item.checked = selectAll.checked);
+                refresh();
+            });
+            checkboxes.forEach(item => item.addEventListener('change', refresh));
+            confirmation.addEventListener('input', refresh);
+            document.getElementById('deleteProgrammesModal')?.addEventListener('hidden.bs.modal', () => {
+                confirmation.value = '';
+                refresh();
+            });
+            refresh();
+        })();
+    </script>
+}

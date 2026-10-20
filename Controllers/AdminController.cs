@@ -12,7 +12,8 @@ public class AdminController(
     ApplicationDbContext dbContext,
     IUserAccessService accessService,
     IInductionWorkflowService workflow,
-    IInductionEmailService emailService) : Controller
+    IInductionEmailService emailService,
+    ILogger<AdminController> logger) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -55,6 +56,225 @@ public class AdminController(
                 .ThenBy(x => x.Name)
                 .ToListAsync()
         });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> EmployeeRecords(string? search)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+
+        var query = dbContext.InductionCases.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(x =>
+                x.EmployeeName.Contains(term)
+                || (x.EmployeeEmail != null && x.EmployeeEmail.Contains(term))
+                || x.EmployeeUsername.Contains(term)
+                || x.Department.Contains(term)
+                || x.Division.Contains(term)
+                || (x.EmployeeNumber != null && x.EmployeeNumber.Contains(term)));
+        }
+
+        var items = await query
+            .OrderBy(x => x.EmployeeName)
+            .Select(x => new EmployeeRecordAdministrationItemViewModel
+            {
+                Id = x.Id,
+                AccessToken = x.AccessToken,
+                EmployeeName = x.EmployeeName,
+                EmployeeEmail = x.EmployeeEmail,
+                Department = x.Department,
+                Division = x.Division,
+                ProgrammeTitle = x.InductionProgramme == null ? null : x.InductionProgramme.Title,
+                Status = x.Status,
+                AppointmentDate = x.AppointmentDate,
+                FeedbackSubmittedAtUtc = x.EmployeeFeedback == null ? null : x.EmployeeFeedback.SubmittedAtUtc,
+                TrainingEvaluationCount = x.TrainingEvaluations.Count
+            })
+            .ToListAsync(HttpContext.RequestAborted);
+
+        return View(new EmployeeRecordAdministrationViewModel
+        {
+            Search = search,
+            TotalInductions = await dbContext.InductionCases.CountAsync(HttpContext.RequestAborted),
+            ProgrammeFeedbackResponses = await dbContext.EmployeeFeedback.CountAsync(HttpContext.RequestAborted),
+            TrainingEvaluationResponses = await dbContext.TrainingEvaluations.CountAsync(HttpContext.RequestAborted),
+            Items = items
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ClearEmployeeFeedback(EmployeeRecordAdministrationActionViewModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+        var ids = SelectedInductionIds(model);
+        if (ids.Length == 0)
+        {
+            TempData["Error"] = "Select at least one employee induction.";
+            return RedirectToEmployeeRecords(model.ReturnSearch);
+        }
+
+        var programmeFeedback = await dbContext.EmployeeFeedback
+            .Where(x => ids.Contains(x.InductionCaseId))
+            .ToListAsync(HttpContext.RequestAborted);
+        var trainingEvaluations = await dbContext.TrainingEvaluations
+            .Where(x => ids.Contains(x.InductionCaseId))
+            .ToListAsync(HttpContext.RequestAborted);
+
+        if (programmeFeedback.Count == 0 && trainingEvaluations.Count == 0)
+        {
+            TempData["Error"] = "The selected employee inductions do not contain feedback responses.";
+            return RedirectToEmployeeRecords(model.ReturnSearch);
+        }
+
+        dbContext.EmployeeFeedback.RemoveRange(programmeFeedback);
+        dbContext.TrainingEvaluations.RemoveRange(trainingEvaluations);
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+
+        logger.LogWarning(
+            "Administrator {Administrator} cleared {ProgrammeFeedbackCount} induction feedback response(s) and {TrainingEvaluationCount} training evaluation(s) for induction IDs {InductionIds}.",
+            accessService.CurrentUsername(User),
+            programmeFeedback.Count,
+            trainingEvaluations.Count,
+            ids);
+        TempData["Success"] = $"Cleared {programmeFeedback.Count} induction feedback response{(programmeFeedback.Count == 1 ? string.Empty : "s")} and {trainingEvaluations.Count} training evaluation{(trainingEvaluations.Count == 1 ? string.Empty : "s")}.";
+        return RedirectToEmployeeRecords(model.ReturnSearch);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteEmployeeInductions(EmployeeRecordAdministrationActionViewModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+        var ids = SelectedInductionIds(model);
+        if (ids.Length == 0)
+        {
+            TempData["Error"] = "Select at least one employee induction.";
+            return RedirectToEmployeeRecords(model.ReturnSearch);
+        }
+        if (!string.Equals(model.ConfirmationText?.Trim(), "DELETE", StringComparison.Ordinal))
+        {
+            TempData["Error"] = "Type DELETE to confirm permanent removal of employee induction records.";
+            return RedirectToEmployeeRecords(model.ReturnSearch);
+        }
+
+        var inductionCases = await dbContext.InductionCases
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync(HttpContext.RequestAborted);
+        if (inductionCases.Count == 0)
+        {
+            TempData["Error"] = "The selected employee inductions could not be found.";
+            return RedirectToEmployeeRecords(model.ReturnSearch);
+        }
+
+        var removedIds = inductionCases.Select(x => x.Id).ToArray();
+        dbContext.InductionCases.RemoveRange(inductionCases);
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+
+        logger.LogWarning(
+            "Administrator {Administrator} permanently deleted {InductionCount} employee induction record(s): {InductionIds}.",
+            accessService.CurrentUsername(User),
+            inductionCases.Count,
+            removedIds);
+        TempData["Success"] = $"Removed {inductionCases.Count} employee induction record{(inductionCases.Count == 1 ? string.Empty : "s")} and the associated workflow data.";
+        return RedirectToEmployeeRecords(model.ReturnSearch);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ProgrammeRecords(string? search)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+
+        var query = dbContext.InductionProgrammes.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            query = query.Where(x => x.Title.Contains(term) || (x.Venue != null && x.Venue.Contains(term)));
+        }
+
+        var items = await query
+            .OrderByDescending(x => x.ProgrammeDate)
+            .ThenBy(x => x.Title)
+            .Select(x => new ProgrammeRecordAdministrationItemViewModel
+            {
+                Id = x.Id,
+                Title = x.Title,
+                ProgrammeDate = x.ProgrammeDate,
+                Venue = x.Venue,
+                Status = x.Status,
+                ParticipantCount = x.Participants.Count,
+                SessionCount = x.Sessions.Count,
+                FeedbackResponseCount = x.Participants.Count(participant => participant.EmployeeFeedback != null),
+                PresentationRatingCount = x.Sessions.SelectMany(session => session.Ratings).Count()
+            })
+            .ToListAsync(HttpContext.RequestAborted);
+
+        return View(new ProgrammeRecordAdministrationViewModel
+        {
+            Search = search,
+            TotalProgrammes = await dbContext.InductionProgrammes.CountAsync(HttpContext.RequestAborted),
+            AssignedEmployees = await dbContext.InductionCases.CountAsync(x => x.InductionProgrammeId != null, HttpContext.RequestAborted),
+            Items = items
+        });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteInductionProgrammes(ProgrammeRecordAdministrationActionViewModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+        var ids = (model.ProgrammeIds ?? [])
+            .Where(x => x > 0)
+            .Distinct()
+            .Take(200)
+            .ToArray();
+        if (ids.Length == 0)
+        {
+            TempData["Error"] = "Select at least one induction programme.";
+            return RedirectToProgrammeRecords(model.ReturnSearch);
+        }
+        if (!string.Equals(model.ConfirmationText?.Trim(), "DELETE", StringComparison.Ordinal))
+        {
+            TempData["Error"] = "Type DELETE to confirm permanent removal of induction programmes.";
+            return RedirectToProgrammeRecords(model.ReturnSearch);
+        }
+
+        var blockedProgrammes = await dbContext.InductionProgrammes
+            .AsNoTracking()
+            .Where(x => ids.Contains(x.Id)
+                && (x.Participants.Any(participant => participant.EmployeeFeedback != null)
+                    || x.Sessions.Any(session => session.Ratings.Any())))
+            .Select(x => x.Title)
+            .ToListAsync(HttpContext.RequestAborted);
+        if (blockedProgrammes.Count > 0)
+        {
+            var examples = string.Join(", ", blockedProgrammes.Take(3));
+            TempData["Error"] = $"Programme deletion was stopped because feedback exists for: {examples}. Clear the affected employee feedback first.";
+            return RedirectToProgrammeRecords(model.ReturnSearch);
+        }
+
+        var programmes = await dbContext.InductionProgrammes
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync(HttpContext.RequestAborted);
+        if (programmes.Count == 0)
+        {
+            TempData["Error"] = "The selected induction programmes could not be found.";
+            return RedirectToProgrammeRecords(model.ReturnSearch);
+        }
+
+        var removedIds = programmes.Select(x => x.Id).ToArray();
+        dbContext.InductionProgrammes.RemoveRange(programmes);
+        await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+
+        logger.LogWarning(
+            "Administrator {Administrator} permanently deleted {ProgrammeCount} induction programme(s): {ProgrammeIds}.",
+            accessService.CurrentUsername(User),
+            programmes.Count,
+            removedIds);
+        TempData["Success"] = $"Removed {programmes.Count} induction programme{(programmes.Count == 1 ? string.Empty : "s")}. Assigned employee induction records were retained and unassigned.";
+        return RedirectToProgrammeRecords(model.ReturnSearch);
     }
 
     [HttpGet]
@@ -369,6 +589,19 @@ public class AdminController(
             && (!model.Id.HasValue || x.Id != model.Id.Value));
         if (duplicate) ModelState.AddModelError(nameof(model.Name), "This value already exists in the selected data type.");
     }
+
+    private static int[] SelectedInductionIds(EmployeeRecordAdministrationActionViewModel model) =>
+        (model.InductionCaseIds ?? [])
+            .Where(x => x > 0)
+            .Distinct()
+            .Take(500)
+            .ToArray();
+
+    private RedirectToActionResult RedirectToEmployeeRecords(string? search) =>
+        RedirectToAction(nameof(EmployeeRecords), new { search = string.IsNullOrWhiteSpace(search) ? null : search.Trim() });
+
+    private RedirectToActionResult RedirectToProgrammeRecords(string? search) =>
+        RedirectToAction(nameof(ProgrammeRecords), new { search = string.IsNullOrWhiteSpace(search) ? null : search.Trim() });
 
     private async Task LoadTemplateOptionsAsync(ChecklistTemplateEditViewModel model)
     {

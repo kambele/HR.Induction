@@ -13,6 +13,75 @@ public class AdminDashboardViewModel
     public DateTime? LastConfigurationUpdateUtc { get; set; }
 }
 
+public class EmployeeRecordAdministrationViewModel
+{
+    public string? Search { get; set; }
+    public int TotalInductions { get; set; }
+    public int ProgrammeFeedbackResponses { get; set; }
+    public int TrainingEvaluationResponses { get; set; }
+    public IReadOnlyList<EmployeeRecordAdministrationItemViewModel> Items { get; set; } = [];
+}
+
+public class EmployeeRecordAdministrationItemViewModel
+{
+    public int Id { get; set; }
+    public Guid AccessToken { get; set; }
+    public string EmployeeName { get; set; } = string.Empty;
+    public string? EmployeeEmail { get; set; }
+    public string Department { get; set; } = string.Empty;
+    public string Division { get; set; } = string.Empty;
+    public string? ProgrammeTitle { get; set; }
+    public InductionStatus Status { get; set; }
+    public DateTime AppointmentDate { get; set; }
+    public DateTime? FeedbackSubmittedAtUtc { get; set; }
+    public int TrainingEvaluationCount { get; set; }
+    public bool HasFeedback => FeedbackSubmittedAtUtc.HasValue || TrainingEvaluationCount > 0;
+}
+
+public class EmployeeRecordAdministrationActionViewModel
+{
+    [Required, MinLength(1)]
+    public int[] InductionCaseIds { get; set; } = [];
+
+    public string? ReturnSearch { get; set; }
+
+    [StringLength(20)]
+    public string? ConfirmationText { get; set; }
+}
+
+public class ProgrammeRecordAdministrationViewModel
+{
+    public string? Search { get; set; }
+    public int TotalProgrammes { get; set; }
+    public int AssignedEmployees { get; set; }
+    public IReadOnlyList<ProgrammeRecordAdministrationItemViewModel> Items { get; set; } = [];
+}
+
+public class ProgrammeRecordAdministrationItemViewModel
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public DateTime ProgrammeDate { get; set; }
+    public string? Venue { get; set; }
+    public InductionProgrammeStatus Status { get; set; }
+    public int ParticipantCount { get; set; }
+    public int SessionCount { get; set; }
+    public int FeedbackResponseCount { get; set; }
+    public int PresentationRatingCount { get; set; }
+    public bool CanDelete => FeedbackResponseCount == 0 && PresentationRatingCount == 0;
+}
+
+public class ProgrammeRecordAdministrationActionViewModel
+{
+    [Required, MinLength(1)]
+    public int[] ProgrammeIds { get; set; } = [];
+
+    public string? ReturnSearch { get; set; }
+
+    [StringLength(20)]
+    public string? ConfirmationText { get; set; }
+}
+
 public class MasterDataListViewModel
 {
     public MasterDataCategory? Category { get; set; }
