@@ -40,7 +40,7 @@
         <span asp-validation-for="ApplicableChecklistPhases" class="text-danger"></span>
     </section>
 
-    <div class="card-heading"><div><h2>Divisional presentation schedule</h2><p>One presentation per division. Time slots cannot overlap. Switch off feedback for agenda items employees should not rate.</p></div>@if (!Model.ScheduleLocked){<button class="btn btn-sm btn-outline-primary" id="addProgrammeSession" type="button">Add presentation</button>}</div>
+    <div class="card-heading"><div><h2>Divisional presentation schedule</h2><p>A division may appear in multiple time slots. Time slots cannot overlap. Switch off feedback for facilitating or administrative agenda items employees should not rate.</p></div>@if (!Model.ScheduleLocked){<button class="btn btn-sm btn-outline-primary" id="addProgrammeSession" type="button">Add presentation</button>}</div>
     @if (Model.ScheduleLocked)
     {
         <div class="alert alert-info">The presentation schedule is locked because employees have submitted ratings. Programme details and status can still be updated.</div>

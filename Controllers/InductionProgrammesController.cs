@@ -354,8 +354,10 @@ public class InductionProgrammesController(
             AverageOverallRating = responses.Count == 0 ? 0 : responses.Average(x => x.OverallProgrammeRating!.Value),
             AveragePresentationRating = allPresentationRatings.Count == 0 ? 0 : allPresentationRatings.Average(x => x.Rating),
             DivisionRatings = feedbackSessions.OrderBy(x => x.SortOrder).Select(x => new DivisionRatingSummary(
+                x.Id,
                 x.Division,
                 x.PresenterName,
+                x.StartTime,
                 x.Ratings.Count == 0 ? 0 : Math.Round(x.Ratings.Average(r => r.Rating), 2),
                 x.Ratings.Count)).ToList(),
             OverallRatingDistribution = Enumerable.Range(1, 5)
@@ -412,7 +414,6 @@ public class InductionProgrammesController(
             .Select(x => x.Name)
             .ToListAsync(HttpContext.RequestAborted);
         var divisionLookup = activeDivisions.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var seenDivisions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < model.Sessions.Count; index++)
         {
             var session = model.Sessions[index];
@@ -422,10 +423,6 @@ public class InductionProgrammesController(
             if (!divisionLookup.Contains(session.Division))
             {
                 ModelState.AddModelError($"Sessions[{index}].Division", "Select an active division.");
-            }
-            if (session.Division.Length > 0 && !seenDivisions.Add(session.Division))
-            {
-                ModelState.AddModelError($"Sessions[{index}].Division", "Each division can appear only once in a programme.");
             }
             if (session.StartTime.HasValue && session.EndTime.HasValue && session.EndTime <= session.StartTime)
             {

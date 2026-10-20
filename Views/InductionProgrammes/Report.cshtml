@@ -2,10 +2,10 @@
 @model InductionProgrammeReportViewModel
 @{
     ViewData["Title"] = "Programme report";
-    var divisionData = JsonSerializer.Serialize(Model.DivisionRatings.Select(x => new { division = x.Division, presenter = x.Presenter, average = x.Average, responses = x.Responses }));
+    var divisionData = JsonSerializer.Serialize(Model.DivisionRatings.Select(x => new { sessionId = x.ProgrammeSessionId, division = x.Division, presenter = x.Presenter, startTime = x.StartTime.ToString("hh\\:mm"), average = x.Average, responses = x.Responses }));
     var overallData = JsonSerializer.Serialize(Model.OverallRatingDistribution.Select(x => new { rating = x.Rating, count = x.Count }));
     var timeData = JsonSerializer.Serialize(Model.TimeAllocationDistribution.Select(x => new { label = x.Label, count = x.Count }));
-    var divisionRatings = Model.DivisionRatings.ToDictionary(x => x.Division, StringComparer.OrdinalIgnoreCase);
+    var sessionRatings = Model.DivisionRatings.ToDictionary(x => x.ProgrammeSessionId);
 }
 @section Styles { <link rel="stylesheet" href="~/lib/c3/c3.min.css" /><link rel="stylesheet" href="~/css/limitless-report.css" asp-append-version="true" /> }
 
@@ -39,7 +39,7 @@ else
                     <tbody>
                     @foreach (var session in Model.Programme.Sessions.OrderBy(x => x.SortOrder))
                     {
-                        divisionRatings.TryGetValue(session.Division, out var rating);
+                        sessionRatings.TryGetValue(session.Id, out var rating);
                         <tr>
                             <td>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</td>
                             <td>@session.Division</td>

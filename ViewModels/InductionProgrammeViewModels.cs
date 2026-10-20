@@ -107,7 +107,7 @@ public class InductionProgrammeReportViewModel
     public IReadOnlyList<NamedCountSummary> TimeAllocationDistribution { get; set; } = [];
 }
 
-public record DivisionRatingSummary(string Division, string Presenter, double Average, int Responses);
+public record DivisionRatingSummary(int ProgrammeSessionId, string Division, string Presenter, TimeSpan StartTime, double Average, int Responses);
 public record RatingCountSummary(int Rating, int Count);
 public record NamedCountSummary(string Label, int Count);
 

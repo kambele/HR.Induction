@@ -16,14 +16,17 @@
         divisionChart.setOption({
             color: ['#2e7b4f'],
             grid: { left: 28, right: 35, top: 18, bottom: 70, containLabel: true },
-            tooltip: { trigger: 'axis', formatter: params => `${params[0].name}<br>${params[0].value.toFixed(2)} / 5` },
-            xAxis: { type: 'category', data: divisionData.map(item => item.division), axisLabel: { interval: 0, rotate: 28, color: '#66736c' }, axisLine: { lineStyle: { color: '#dce4dd' } } },
+            tooltip: { trigger: 'axis', formatter: params => `${params[0].data.division}<br>${params[0].data.presenter}<br>${params[0].data.startTime}<br>${params[0].value.toFixed(2)} / 5` },
+            xAxis: { type: 'category', data: divisionData.map(item => `${item.division} ${item.startTime}`), axisLabel: { interval: 0, rotate: 28, color: '#66736c' }, axisLine: { lineStyle: { color: '#dce4dd' } } },
             yAxis: { type: 'value', min: 0, max: 5, interval: 1, axisLabel: { color: '#66736c' }, splitLine: { lineStyle: { color: '#edf1ed' } } },
             series: [{
                 type: 'bar',
                 barMaxWidth: 42,
                 data: divisionData.map(item => ({
                     value: item.average,
+                    division: item.division,
+                    presenter: item.presenter,
+                    startTime: item.startTime,
                     itemStyle: { borderRadius: [4, 4, 0, 0] }
                 })),
                 label: {
