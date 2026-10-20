@@ -59,6 +59,8 @@ public class InductionCase
 {
     public int Id { get; set; }
 
+    public Guid AccessToken { get; set; } = Guid.NewGuid();
+
     [Required, StringLength(30)]
     public string EmployeeTitle { get; set; } = string.Empty;
 

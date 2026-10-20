@@ -140,7 +140,7 @@ public class InductionsController(
         await dbContext.SaveChangesAsync();
 
         TempData["Success"] = $"Induction plan created for {inductionCase.EmployeeName}.";
-        return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+        return RedirectToDetails(inductionCase);
     }
 
     [HttpGet]
@@ -155,6 +155,7 @@ public class InductionsController(
         var model = new EditInductionViewModel
         {
             Id = inductionCase.Id,
+            AccessToken = inductionCase.AccessToken,
             EmployeeTitle = inductionCase.EmployeeTitle,
             FirstName = inductionCase.FirstName,
             LastName = inductionCase.LastName,
@@ -186,6 +187,7 @@ public class InductionsController(
             .Include(x => x.ProgrammeAttendance)
             .SingleOrDefaultAsync(x => x.Id == model.Id, HttpContext.RequestAborted);
         if (inductionCase is null) return NotFound();
+        model.AccessToken = inductionCase.AccessToken;
 
         var employeeTitle = model.EmployeeTitle?.Trim() ?? string.Empty;
         var firstName = model.FirstName?.Trim() ?? string.Empty;
@@ -252,7 +254,7 @@ public class InductionsController(
 
         await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
         TempData["Success"] = $"Induction record updated for {inductionCase.EmployeeName}.";
-        return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+        return RedirectToDetails(inductionCase);
     }
 
     [HttpGet]
@@ -332,8 +334,22 @@ public class InductionsController(
         }
     }
 
-    public async Task<IActionResult> Details(int id)
+    public async Task<IActionResult> Details(string id)
     {
+        if (!Guid.TryParse(id, out var accessToken))
+        {
+            if (!int.TryParse(id, out var legacyId)) return NotFound();
+
+            var legacyInduction = await dbContext.InductionCases
+                .AsNoTracking()
+                .Include(x => x.Tasks)
+                .SingleOrDefaultAsync(x => x.Id == legacyId, HttpContext.RequestAborted);
+            if (legacyInduction is null) return NotFound();
+            if (!accessService.CanView(User, legacyInduction)) return Forbid();
+
+            return RedirectToDetails(legacyInduction);
+        }
+
         var inductionCase = await dbContext.InductionCases
             .AsNoTracking()
             .AsSplitQuery()
@@ -348,7 +364,7 @@ public class InductionsController(
                 .ThenInclude(x => x!.Sessions)
             .Include(x => x.InductionProgramme)
                 .ThenInclude(x => x!.ChecklistPhases)
-            .SingleOrDefaultAsync(x => x.Id == id);
+            .SingleOrDefaultAsync(x => x.AccessToken == accessToken);
 
         if (inductionCase is null) return NotFound();
         if (!accessService.CanView(User, inductionCase)) return Forbid();
@@ -401,14 +417,14 @@ public class InductionsController(
         if (!inductionCase.InductionProgrammeId.HasValue)
         {
             TempData["Error"] = "Assign an induction programme before refreshing the checklist.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToDetails(inductionCase);
         }
 
         var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
         if (settings.LockChecklistWhenSignOffStarts && inductionCase.SignOffs.Count > 0)
         {
             TempData["Error"] = "The checklist cannot be refreshed because the sign-off process has started.";
-            return RedirectToAction(nameof(Details), new { id });
+            return RedirectToDetails(inductionCase);
         }
 
         var result = await workflow.RefreshTasksFromProgrammeAsync(inductionCase, HttpContext.RequestAborted);
@@ -416,7 +432,7 @@ public class InductionsController(
         await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
 
         TempData["Success"] = $"Checklist refreshed: {result.ApplicableTasks} applicable task{(result.ApplicableTasks == 1 ? string.Empty : "s")}, {result.Added} added, {result.Included} restored and {result.Excluded} excluded.";
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToDetails(inductionCase);
     }
 
     [HttpGet]
@@ -458,13 +474,13 @@ public class InductionsController(
         if (!ModelState.IsValid)
         {
             TempData["Error"] = "Enter a valid employee email address.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return RedirectToDetails(inductionCase);
         }
 
         inductionCase.EmployeeEmail = model.EmployeeEmail.Trim();
         await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
         TempData["Success"] = $"Employee email updated for {inductionCase.EmployeeName}.";
-        return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+        return RedirectToDetails(inductionCase);
     }
 
     [HttpPost]
@@ -473,8 +489,8 @@ public class InductionsController(
     {
         if (!accessService.IsHr(User)) return Forbid();
 
-        IActionResult RedirectBack() => model.ReturnToInductionId.HasValue
-            ? RedirectToAction(nameof(Details), new { id = model.ReturnToInductionId.Value })
+        IActionResult RedirectBack() => model.ReturnToInductionToken.HasValue
+            ? RedirectToAction(nameof(Details), new { id = model.ReturnToInductionToken.Value.ToString("N") })
             : RedirectToAction(nameof(Index));
 
         if (!ModelState.IsValid || model.InductionCaseIds.Length == 0)
@@ -517,7 +533,7 @@ public class InductionsController(
                 continue;
             }
 
-            var inductionUrl = BuildInductionUrl(inductionCase.Id);
+            var inductionUrl = BuildInductionUrl(inductionCase.AccessToken);
             if (string.IsNullOrWhiteSpace(inductionUrl))
             {
                 failures.Add($"{inductionCase.EmployeeName}: the induction link could not be created.");
@@ -559,17 +575,18 @@ public class InductionsController(
         return RedirectBack();
     }
 
-    private string? BuildInductionUrl(int inductionCaseId)
+    private string? BuildInductionUrl(Guid accessToken)
     {
+        var token = accessToken.ToString("N");
         if (emailService.PublicBaseUrl is { Length: > 0 } publicBaseUrl)
         {
-            return $"{publicBaseUrl.TrimEnd('/')}/Inductions/Details/{inductionCaseId}";
+            return $"{publicBaseUrl.TrimEnd('/')}/Inductions/Details/{token}";
         }
 
         return Url.Action(
             nameof(Details),
             "Inductions",
-            new { id = inductionCaseId },
+            new { id = token },
             Request.Scheme,
             Request.Host.Value);
     }
@@ -595,7 +612,7 @@ public class InductionsController(
         if (task.ExcludedByProgramme)
         {
             TempData["Error"] = "This checklist item is not applicable to the assigned induction programme.";
-            return RedirectToAction(nameof(Details), new { id = task.InductionCaseId });
+            return RedirectToDetails(task.InductionCase);
         }
         if (!accessService.CanComplete(User, task)) return Forbid();
 
@@ -603,13 +620,13 @@ public class InductionsController(
         if (settings.LockChecklistWhenSignOffStarts && task.InductionCase.SignOffs.Count != 0)
         {
             TempData["Error"] = "This record is locked because sign-off has started.";
-            return RedirectToAction(nameof(Details), new { id = task.InductionCaseId });
+            return RedirectToDetails(task.InductionCase);
         }
 
         if (status == InductionTaskStatus.NotApplicable && string.IsNullOrWhiteSpace(notes))
         {
             TempData["Error"] = "Add a reason before marking an item not applicable.";
-            return RedirectToAction(nameof(Details), new { id = task.InductionCaseId });
+            return RedirectToDetails(task.InductionCase);
         }
 
         task.Status = status;
@@ -630,7 +647,7 @@ public class InductionsController(
         await dbContext.SaveChangesAsync();
 
         TempData["Success"] = "Checklist item updated.";
-        return RedirectToAction(nameof(Details), new { id = task.InductionCaseId });
+        return RedirectToDetails(task.InductionCase);
     }
 
     [HttpGet]
@@ -748,7 +765,7 @@ public class InductionsController(
         if (inductionCase.SignOffs.Any(x => x.Role == model.Role))
         {
             TempData["Error"] = "This sign-off has already been completed.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return RedirectToDetails(inductionCase);
         }
 
         var settings = await configurationService.GetAsync(HttpContext.RequestAborted);
@@ -759,7 +776,7 @@ public class InductionsController(
         if (settings.RequireMandatoryTasksBeforeSignOff && !mandatoryComplete)
         {
             TempData["Error"] = "All mandatory checklist items must be completed before sign-off.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return RedirectToDetails(inductionCase);
         }
 
         if (settings.RequireEmployeeFeedbackBeforeSignOff
@@ -767,7 +784,7 @@ public class InductionsController(
             && inductionCase.EmployeeFeedback is null)
         {
             TempData["Error"] = "Employee feedback must be submitted before employee sign-off.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return RedirectToDetails(inductionCase);
         }
 
         if (settings.EnforceSequentialSignOff
@@ -775,7 +792,7 @@ public class InductionsController(
             && !inductionCase.SignOffs.Any(x => x.Role == SignOffRole.Employee))
         {
             TempData["Error"] = "Employee sign-off must be completed first.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return RedirectToDetails(inductionCase);
         }
 
         if (settings.EnforceSequentialSignOff
@@ -783,7 +800,7 @@ public class InductionsController(
             && !inductionCase.SignOffs.Any(x => x.Role == SignOffRole.LineManager))
         {
             TempData["Error"] = "Line manager sign-off must be completed first.";
-            return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+            return RedirectToDetails(inductionCase);
         }
 
         inductionCase.SignOffs.Add(new SignOff
@@ -801,7 +818,7 @@ public class InductionsController(
         await workflow.RefreshStatusAsync(inductionCase, HttpContext.RequestAborted);
         await dbContext.SaveChangesAsync();
         TempData["Success"] = "Sign-off recorded with your Windows identity and timestamp.";
-        return RedirectToAction(nameof(Details), new { id = inductionCase.Id });
+        return RedirectToDetails(inductionCase);
     }
 
     private async Task LoadCreateOptionsAsync(CreateInductionViewModel model)
@@ -821,6 +838,9 @@ public class InductionsController(
                 model.InductionProgrammeId == x.Id))
             .ToListAsync(HttpContext.RequestAborted);
     }
+
+    private RedirectToActionResult RedirectToDetails(InductionCase inductionCase) =>
+        RedirectToAction(nameof(Details), new { id = inductionCase.AccessToken.ToString("N") });
 
     private async Task<IReadOnlyList<SelectListItem>> MasterOptionsAsync(MasterDataCategory category, string? selected)
     {

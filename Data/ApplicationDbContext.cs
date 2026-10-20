@@ -22,6 +22,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<InductionCase>()
+            .HasIndex(x => x.AccessToken)
+            .IsUnique();
+
+        modelBuilder.Entity<InductionCase>()
             .HasMany(x => x.Tasks)
             .WithOne(x => x.InductionCase)
             .HasForeignKey(x => x.InductionCaseId)

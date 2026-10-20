@@ -141,6 +141,9 @@ namespace Namfisa.Induction.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<Guid>("AccessToken")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("AppointmentDate")
                         .HasColumnType("datetime2");
 
@@ -243,6 +246,9 @@ namespace Namfisa.Induction.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AccessToken")
+                        .IsUnique();
 
                     b.HasIndex("InductionProgrammeId");
 

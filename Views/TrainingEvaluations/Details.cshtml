@@ -10,7 +10,7 @@
 }
 
 <section class="page-heading compact-heading">
-    <a class="back-link" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.InductionCaseId">&larr; Back to induction</a>
+    <a class="back-link" asp-controller="Inductions" asp-action="Details" asp-route-id="@(Model.InductionCase.AccessToken.ToString("N"))">&larr; Back to induction</a>
     <p class="eyebrow">Training evaluation</p>
     <h1>@Model.CourseTitle</h1>
     <p class="lead-copy">@Model.CourseProvider · @Model.CourseDate.ToString("dd MMMM yyyy")</p>

@@ -22,6 +22,7 @@ public class TrainingEvaluationsController(
         if (!accessService.CanSubmitFeedback(User, inductionCase)) return Forbid();
 
         ViewBag.EmployeeName = inductionCase.EmployeeName;
+        ViewBag.InductionAccessToken = inductionCase.AccessToken.ToString("N");
         return View(new TrainingEvaluationInputModel
         {
             InductionCaseId = inductionCase.Id,
@@ -42,6 +43,7 @@ public class TrainingEvaluationsController(
         if (!ModelState.IsValid)
         {
             ViewBag.EmployeeName = inductionCase.EmployeeName;
+            ViewBag.InductionAccessToken = inductionCase.AccessToken.ToString("N");
             return View(model);
         }
 
@@ -78,7 +80,7 @@ public class TrainingEvaluationsController(
         dbContext.TrainingEvaluations.Add(evaluation);
         await dbContext.SaveChangesAsync();
         TempData["Success"] = "Training evaluation submitted.";
-        return RedirectToAction("Details", "Inductions", new { id = inductionCase.Id });
+        return RedirectToAction("Details", "Inductions", new { id = inductionCase.AccessToken.ToString("N") });
     }
 
     public async Task<IActionResult> Details(int id)

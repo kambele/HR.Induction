@@ -4,7 +4,7 @@
 }
 
 <section class="page-heading compact-heading">
-    <a class="back-link" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.InductionCaseId">&larr; Back to induction</a>
+    <a class="back-link" asp-controller="Inductions" asp-action="Details" asp-route-id="@ViewBag.InductionAccessToken">&larr; Back to induction</a>
     <p class="eyebrow">Training feedback</p>
     <h1>Training evaluation</h1>
     <p class="lead-copy">Participant: @ViewBag.EmployeeName. No response is selected by default.</p>
@@ -169,7 +169,7 @@
     </fieldset>
 
     <div class="form-actions">
-        <a class="btn btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.InductionCaseId">Cancel</a>
+        <a class="btn btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@ViewBag.InductionAccessToken">Cancel</a>
         <button class="btn btn-primary" type="submit">Submit evaluation</button>
     </div>
 </form>

@@ -24,7 +24,7 @@
 }
 
 <section class="page-heading compact-heading">
-    <a class="back-link" asp-action="Details" asp-route-id="@induction.Id">&larr; Back to induction</a>
+    <a class="back-link" asp-action="Details" asp-route-id="@(induction.AccessToken.ToString("N"))">&larr; Back to induction</a>
     <p class="eyebrow">Employee feedback</p>
     <h1>@programme.Title</h1>
     <p class="lead-copy">@programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy") · @(programme.Venue ?? "Venue to be confirmed")</p>

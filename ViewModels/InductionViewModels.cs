@@ -65,6 +65,8 @@ public class EditInductionViewModel : CreateInductionViewModel
 {
     [Required]
     public int Id { get; set; }
+
+    public Guid AccessToken { get; set; }
 }
 
 public class InductionImportResult
@@ -165,6 +167,8 @@ public class SendInductionInvitationsViewModel
     public int[] InductionCaseIds { get; set; } = [];
 
     public int? ReturnToInductionId { get; set; }
+
+    public Guid? ReturnToInductionToken { get; set; }
 }
 
 public class UpdateEmployeeEmailViewModel

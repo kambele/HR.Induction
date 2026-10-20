@@ -51,7 +51,7 @@
         {
             <div class="form-actions mt-4">
                 <a class="btn btn-primary" asp-controller="Inductions" asp-action="Feedback" asp-route-id="@Model.Id">@(Model.EmployeeFeedback is null ? "Continue to feedback" : "View submitted feedback")</a>
-                <a class="btn btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@Model.Id">Open induction plan</a>
+                <a class="btn btn-outline-secondary" asp-controller="Inductions" asp-action="Details" asp-route-id="@(Model.AccessToken.ToString("N"))">Open induction plan</a>
             </div>
         }
 

@@ -4,7 +4,7 @@
 }
 
 <section class="page-heading compact-heading">
-    <a class="back-link" asp-action="Details" asp-route-id="@Model.Id">&larr; Back to induction</a>
+    <a class="back-link" asp-action="Details" asp-route-id="@(Model.AccessToken.ToString("N"))">&larr; Back to induction</a>
     <p class="eyebrow">HR business partner</p>
     <h1>Edit induction record</h1>
     <p class="lead-copy">Update employee details, responsible people, appointment date and the assigned corporate induction programme.</p>
@@ -12,6 +12,7 @@
 
 <form asp-action="Edit" method="post" class="content-card form-card">
     <input asp-for="Id" type="hidden" />
+    <input asp-for="AccessToken" type="hidden" />
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
     <fieldset>
@@ -43,7 +44,7 @@
     </fieldset>
 
     <div class="alert alert-info">Changing an appointment date recalculates due dates only for checklist items that have not started. Existing signatures and completed activity audit records are preserved.</div>
-    <div class="form-actions"><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@Model.Id">Cancel</a><button class="btn btn-primary" type="submit">Save induction record</button></div>
+    <div class="form-actions"><a class="btn btn-outline-secondary" asp-action="Details" asp-route-id="@(Model.AccessToken.ToString("N"))">Cancel</a><button class="btn btn-primary" type="submit">Save induction record</button></div>
 </form>
 
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

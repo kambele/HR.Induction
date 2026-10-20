@@ -105,6 +105,7 @@
                 <form asp-action="SendInvitations" method="post">
                     <input type="hidden" name="InductionCaseIds" value="@induction.Id" />
                     <input type="hidden" name="ReturnToInductionId" value="@induction.Id" />
+                    <input type="hidden" name="ReturnToInductionToken" value="@induction.AccessToken" />
                     <div class="modal-header">
                         <div>
                             <p class="eyebrow mb-1">Confirm invitation</p>
