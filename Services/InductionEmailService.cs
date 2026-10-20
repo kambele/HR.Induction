@@ -44,6 +44,9 @@ public interface IInductionEmailService
 
 public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions> options) : IInductionEmailService
 {
+    private const string FeedbackGuideResourceName = "Namfisa.Induction.EmailAttachments.EmployeeFeedbackGuide.pdf";
+    private const string FeedbackGuideFileName = "NAMFISA Employee Induction Feedback Guide.pdf";
+
     public SmtpConfigurationStatus ConfigurationStatus => GetConfigurationStatus(options.CurrentValue);
     public string? PublicBaseUrl => string.IsNullOrWhiteSpace(options.CurrentValue.PublicBaseUrl)
         ? null
@@ -73,6 +76,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         {
             messageText = $"{messageText}\r\n\r\nOpen induction plan: {inductionUrl}";
         }
+        var plainText = $"{messageText}\r\n\r\nA step-by-step employee feedback guide is attached to this email.";
 
         using var message = new MailMessage
         {
@@ -84,13 +88,14 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         message.To.Add(new MailAddress(inductionCase.EmployeeEmail, inductionCase.EmployeeName));
         message.Headers.Add("X-NAMFISA-Induction-Id", inductionCase.Id.ToString(CultureInfo.InvariantCulture));
         message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(
-            messageText,
+            plainText,
             Encoding.UTF8,
             MediaTypeNames.Text.Plain));
         message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(
             BuildHtmlBody(inductionCase, inductionUrl, messageText),
             Encoding.UTF8,
             MediaTypeNames.Text.Html));
+        AddEmployeeFeedbackGuide(message);
 
         using var smtpClient = new SmtpClient(emailOptions.SmtpHost!, emailOptions.SmtpPort)
         {
@@ -127,7 +132,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
 
         var venue = string.IsNullOrWhiteSpace(programme.Venue) ? "Venue to be confirmed" : programme.Venue;
         var subject = $"Attendance confirmation: {programme.Title} - {programme.ProgrammeDate:dd MMMM yyyy}";
-        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\nYou are scheduled to attend {programme.Title} on {programme.ProgrammeDate:dddd, dd MMMM yyyy} at {venue}. Please use the link below and sign in with your NAMFISA Windows account to confirm whether you are present or absent.\r\n\r\n{attendanceUrl}";
+        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\nYou are scheduled to attend {programme.Title} on {programme.ProgrammeDate:dddd, dd MMMM yyyy} at {venue}. Please use the link below and sign in with your NAMFISA Windows account to confirm whether you are present or absent.\r\n\r\n{attendanceUrl}\r\n\r\nA step-by-step employee feedback guide is attached to this email.";
 
         using var message = new MailMessage
         {
@@ -144,6 +149,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
             BuildAttendanceHtmlBody(inductionCase, programme, attendanceUrl),
             Encoding.UTF8,
             MediaTypeNames.Text.Html));
+        AddEmployeeFeedbackGuide(message);
 
         using var smtpClient = new SmtpClient(emailOptions.SmtpHost!, emailOptions.SmtpPort)
         {
@@ -189,6 +195,17 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
             $"SMTP delivery is ready through {emailOptions.SmtpHost}:{emailOptions.SmtpPort} ({security}) from {emailOptions.FromAddress}.");
     }
 
+    private static void AddEmployeeFeedbackGuide(MailMessage message)
+    {
+        var guideStream = typeof(InductionEmailService).Assembly
+            .GetManifestResourceStream(FeedbackGuideResourceName)
+            ?? throw new InvalidOperationException("The employee feedback guide attachment is not available.");
+
+        var attachment = new Attachment(guideStream, FeedbackGuideFileName, MediaTypeNames.Application.Pdf);
+        attachment.ContentDisposition!.DispositionType = DispositionTypeNames.Attachment;
+        message.Attachments.Add(attachment);
+    }
+
     private static string ApplyTokens(string template, InductionCase inductionCase, string inductionUrl) =>
         template
             .Replace("{EmployeeName}", inductionCase.EmployeeName, StringComparison.OrdinalIgnoreCase)
@@ -232,6 +249,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
                         <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Open induction plan</a>
                       </td></tr></table>
+                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Feedback guide attached</strong><br>The attached one-page guide explains how to confirm attendance, rate every presentation and submit your feedback.</div>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">This invitation was sent by the NAMFISA Employee Induction system.</td></tr>
@@ -276,6 +294,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
                         <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Confirm attendance</a>
                       </td></tr></table>
+                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Feedback guide attached</strong><br>The attached one-page guide explains how to continue from attendance confirmation to programme feedback.</div>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">Attendance confirmations are recorded against the authenticated employee AD account.</td></tr>
