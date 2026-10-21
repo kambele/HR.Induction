@@ -266,7 +266,7 @@ else
                                 <div><time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time><span><strong>@session.Division</strong><small>@session.PresenterName</small></span></div>
                             }
                         </div>
-                        <small>The email contains a one-time attendance-confirmation link and attaches the employee attendance guide.</small>
+                        <small>The email contains a reusable programme link with a one-time attendance response and attaches the employee attendance guide.</small>
                     </div>
                     <div class="invitation-selection-toolbar">
                         <div class="form-check"><input class="form-check-input" type="checkbox" id="selectAllAttendance" disabled="@(attendeesWithEmail == 0 ? "disabled" : null)" /><label class="form-check-label" for="selectAllAttendance">Select all attendees with email</label></div>

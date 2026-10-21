@@ -140,7 +140,9 @@ public class EmployeeAttendancePortalViewModel
 {
     public Guid Token { get; set; }
     public required string EmployeeName { get; set; }
-    public required string ProgrammeTitle { get; set; }
+    public required InductionProgramme Programme { get; set; }
+    public ProgrammeAttendanceStatus AttendanceStatus { get; set; }
+    public bool CanConfirm { get; set; }
 }
 
 public class EmployeeFeedbackPortalViewModel

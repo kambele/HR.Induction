@@ -495,6 +495,6 @@ D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\dlgfvcjd3k
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\36fhv0pbsy-{0}-up8klt7cvo-up8klt7cvo.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\iien4pboi5-{0}-91wz5g16sr-91wz5g16sr.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\pl717qwlf9-{0}-ts1ksf51gn-ts1ksf51gn.gz
-D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\j2ejbiyd0p-{0}-yy2l6h0h0a-yy2l6h0h0a.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\bp3yi4ulkg-{0}-kpdqdshpek-kpdqdshpek.gz
 D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\staticwebassets.upToDateCheck.txt
+D:\Development\Namfisa.Induction\obj\Debug\net10.0-windows\compressed\j2ejbiyd0p-{0}-m3k4uvlm3u-m3k4uvlm3u.gz

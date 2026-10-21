@@ -2,28 +2,54 @@
 @{
     Layout = "_EmployeeLayout";
     ViewData["Title"] = "Confirm attendance";
+    var programme = Model.Programme;
 }
 
 <section class="employee-portal-card employee-portal-card-compact">
-    <p class="eyebrow">One-time attendance confirmation</p>
-    <h1>Confirm your attendance</h1>
-    <p class="employee-portal-intro">Hello <strong>@Model.EmployeeName</strong>. Please confirm your attendance for <strong>@Model.ProgrammeTitle</strong>.</p>
+    <p class="eyebrow">Employee programme and attendance</p>
+    <h1>@programme.Title</h1>
+    <p class="employee-portal-intro">Hello <strong>@Model.EmployeeName</strong>. Review the programme below and confirm your attendance.</p>
 
-    <form asp-controller="EmployeePortal" asp-action="Attendance" asp-route-token="@Model.Token" method="post">
-        <div asp-validation-summary="All" class="alert alert-danger"></div>
-        <div class="employee-response-grid">
-            <button class="employee-response-button is-present" type="submit" name="status" value="Present">
-                <span aria-hidden="true">✓</span>
-                <strong>I am present</strong>
-            </button>
-            <button class="employee-response-button is-absent" type="submit" name="status" value="Absent">
-                <span aria-hidden="true">×</span>
-                <strong>I am absent</strong>
-            </button>
+    <dl class="programme-facts employee-programme-facts">
+        <div><dt>Date</dt><dd>@programme.ProgrammeDate.ToString("dddd, dd MMMM yyyy")</dd></div>
+        <div><dt>Venue</dt><dd>@(programme.Venue ?? "To be confirmed")</dd></div>
+    </dl>
+
+    <div class="programme-agenda-list employee-programme-agenda">
+        @foreach (var session in programme.Sessions.OrderBy(x => x.SortOrder))
+        {
+            <div>
+                <time>@session.StartTime.ToString("hh\\:mm")-@session.EndTime.ToString("hh\\:mm")</time>
+                <span><strong>@session.Division</strong><small>@session.PresenterName</small></span>
+            </div>
+        }
+    </div>
+
+    @if (Model.CanConfirm)
+    {
+        <form asp-controller="EmployeePortal" asp-action="Attendance" asp-route-token="@Model.Token" method="post" class="employee-attendance-form">
+            <div asp-validation-summary="All" class="alert alert-danger"></div>
+            <h2>Confirm your attendance</h2>
+            <div class="employee-response-grid">
+                <button class="employee-response-button is-present" type="submit" name="status" value="Present">
+                    <span aria-hidden="true">✓</span>
+                    <strong>I am present</strong>
+                </button>
+                <button class="employee-response-button is-absent" type="submit" name="status" value="Absent">
+                    <span aria-hidden="true">×</span>
+                    <strong>I am absent</strong>
+                </button>
+            </div>
+        </form>
+        <p class="employee-portal-security">Your attendance response can be submitted only once and is valid only for your Windows account.</p>
+    }
+    else
+    {
+        <div class="employee-attendance-recorded">
+            <span aria-hidden="true">✓</span>
+            <div><strong>Attendance already confirmed</strong><p>Your response is recorded as @Model.AttendanceStatus. The programme remains available from this link.</p></div>
         </div>
-    </form>
-
-    <p class="employee-portal-security">This link can be submitted once and is valid only for your Windows account.</p>
+    }
 </section>
 
 @section Scripts {

@@ -34,17 +34,7 @@ public class EmployeePortalController(
             return PortalUnavailable(StatusCodes.Status403Forbidden,
                 "This invitation belongs to a different employee Windows account.");
         }
-        if (attendance.ConfirmedAtUtc.HasValue || attendance.Status != ProgrammeAttendanceStatus.Pending)
-        {
-            return PortalUnavailable();
-        }
-
-        return View(new EmployeeAttendancePortalViewModel
-        {
-            Token = token,
-            EmployeeName = attendance.InductionCase.EmployeeName,
-            ProgrammeTitle = attendance.InductionProgramme.Title
-        });
+        return View(BuildAttendanceModel(attendance, token));
     }
 
     [HttpPost("Attendance/{token:guid}")]
@@ -52,6 +42,7 @@ public class EmployeePortalController(
     public async Task<IActionResult> Attendance(Guid token, ProgrammeAttendanceStatus status)
     {
         var attendance = await AttendanceTokenQuery()
+            .AsNoTracking()
             .SingleOrDefaultAsync(
                 x => x.AttendanceAccessToken == token,
                 HttpContext.RequestAborted);
@@ -72,28 +63,28 @@ public class EmployeePortalController(
         if (status is not ProgrammeAttendanceStatus.Present and not ProgrammeAttendanceStatus.Absent)
         {
             ModelState.AddModelError(nameof(status), "Select Present or Absent.");
-            return View(new EmployeeAttendancePortalViewModel
-            {
-                Token = token,
-                EmployeeName = attendance.InductionCase.EmployeeName,
-                ProgrammeTitle = attendance.InductionProgramme.Title
-            });
+            return View(BuildAttendanceModel(attendance, token));
         }
 
-        attendance.Status = status;
-        attendance.ConfirmedBy = accessService.CurrentUsername(User);
-        attendance.ConfirmedBySid = (User.Identity as WindowsIdentity)?.User?.Value;
-        attendance.AuthenticationType = User.Identity?.AuthenticationType;
-        attendance.ConfirmationSource = "Employee one-time link";
-        attendance.ConfirmedAtUtc = DateTime.UtcNow;
-        attendance.AttendanceAccessToken = null;
-        attendance.AttendanceAccessTokenUsedAtUtc = DateTime.UtcNow;
-
-        try
-        {
-            await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
-        }
-        catch (DbUpdateConcurrencyException)
+        var confirmedAtUtc = DateTime.UtcNow;
+        var confirmedBy = accessService.CurrentUsername(User);
+        var confirmedBySid = (User.Identity as WindowsIdentity)?.User?.Value;
+        var authenticationType = User.Identity?.AuthenticationType;
+        var updated = await dbContext.ProgrammeAttendances
+            .Where(x => x.Id == attendance.Id
+                && x.AttendanceAccessToken == token
+                && x.ConfirmedAtUtc == null
+                && x.Status == ProgrammeAttendanceStatus.Pending)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.Status, status)
+                .SetProperty(x => x.ConfirmedBy, confirmedBy)
+                .SetProperty(x => x.ConfirmedBySid, confirmedBySid)
+                .SetProperty(x => x.AuthenticationType, authenticationType)
+                .SetProperty(x => x.ConfirmationSource, "Employee programme link")
+                .SetProperty(x => x.ConfirmedAtUtc, confirmedAtUtc)
+                .SetProperty(x => x.AttendanceAccessTokenUsedAtUtc, confirmedAtUtc),
+                HttpContext.RequestAborted);
+        if (updated != 1)
         {
             return PortalUnavailable();
         }
@@ -109,10 +100,15 @@ public class EmployeePortalController(
                     attendance.InductionCase,
                     attendance.InductionProgramme,
                     HttpContext.RequestAborted);
-                attendance.CalendarInvitationSentAtUtc = DateTime.UtcNow;
-                attendance.CalendarInvitationSentBy = accessService.CurrentUsername(User);
-                attendance.CalendarInvitationSentTo = attendance.InductionCase.EmployeeEmail.Trim();
-                await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+                var calendarSentAtUtc = DateTime.UtcNow;
+                var calendarSentTo = attendance.InductionCase.EmployeeEmail.Trim();
+                await dbContext.ProgrammeAttendances
+                    .Where(x => x.Id == attendance.Id && x.CalendarInvitationSentAtUtc == null)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.CalendarInvitationSentAtUtc, calendarSentAtUtc)
+                        .SetProperty(x => x.CalendarInvitationSentBy, confirmedBy)
+                        .SetProperty(x => x.CalendarInvitationSentTo, calendarSentTo),
+                        HttpContext.RequestAborted);
             }
             catch (Exception exception)
             {
@@ -302,5 +298,17 @@ public class EmployeePortalController(
                 .Select(x => new PresentationRatingInputModel { ProgrammeSessionId = x.Id })
                 .ToList()
         }
+    };
+
+    private static EmployeeAttendancePortalViewModel BuildAttendanceModel(
+        ProgrammeAttendance attendance,
+        Guid token) => new()
+    {
+        Token = token,
+        EmployeeName = attendance.InductionCase.EmployeeName,
+        Programme = attendance.InductionProgramme,
+        AttendanceStatus = attendance.Status,
+        CanConfirm = !attendance.ConfirmedAtUtc.HasValue
+            && attendance.Status == ProgrammeAttendanceStatus.Pending
     };
 }

@@ -67,6 +67,13 @@
 .employee-response-button.is-present:hover { border-color: var(--employee-green); background: #eef7f1; }
 .employee-response-button.is-absent:hover { border-color: #ad2e24; background: #fff3f2; }
 .employee-portal-security { margin: 24px 0 0; color: var(--employee-muted); font-size: .9rem; text-align: center; }
+.employee-programme-facts { margin-bottom: 26px; }
+.employee-programme-agenda { margin-bottom: 30px; }
+.employee-attendance-form { padding-top: 28px; border-top: 1px solid var(--employee-border); }
+.employee-attendance-form h2 { margin-bottom: 18px; font-size: 1.25rem; }
+.employee-attendance-recorded { margin-top: 30px; padding: 18px; display: flex; gap: 14px; align-items: flex-start; background: #eef7f1; border: 1px solid #cde1d2; border-radius: 10px; }
+.employee-attendance-recorded > span { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; background: var(--employee-green); color: #fff; font-weight: 800; }
+.employee-attendance-recorded p { margin: 4px 0 0; color: var(--employee-muted); }
 
 .employee-form-section { padding: 28px 0; border-top: 1px solid var(--employee-border); }
 .employee-form-section h2 { margin-bottom: 18px; font-size: 1.25rem; }

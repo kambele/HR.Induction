@@ -524,11 +524,6 @@ public class PresentersController(
         attendance.ConfirmationSource = source;
         attendance.AuthenticationType = User.Identity?.AuthenticationType;
         attendance.ConfirmedBySid = (User.Identity as WindowsIdentity)?.User?.Value;
-        if (attendance.AttendanceAccessToken.HasValue)
-        {
-            attendance.AttendanceAccessToken = null;
-            attendance.AttendanceAccessTokenUsedAtUtc = DateTime.UtcNow;
-        }
     }
 
     private string? BuildAttendanceUrl(Guid token)
