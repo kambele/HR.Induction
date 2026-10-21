@@ -1,7 +1,10 @@
+wwwroot\css\employee-portal.css
+wwwroot\css\limitless-light.css
 wwwroot\css\limitless-report.css
 wwwroot\css\site.css
 wwwroot\favicon.ico
 wwwroot\images\namfisa-logo.png
+wwwroot\js\dashboard-charts.js
 wwwroot\js\programme-report.js
 wwwroot\js\site.js
 wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css
@@ -72,9 +75,6 @@ wwwroot\lib\jquery\dist\jquery.slim.min.js
 wwwroot\lib\jquery\dist\jquery.slim.min.map
 wwwroot\lib\jquery\LICENSE.txt
 wwwroot\templates\NAMFISA-Induction-Import-Template.xlsx
-wwwroot\css\limitless-light.css
-wwwroot\js\dashboard-charts.js
-wwwroot\css\employee-portal.css
 D:\Development\Namfisa.Induction\wwwroot\css\employee-portal.css
 D:\Development\Namfisa.Induction\wwwroot\css\site.css
 D:\Development\Namfisa.Induction\wwwroot\favicon.ico

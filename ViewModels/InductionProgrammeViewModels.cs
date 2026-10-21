@@ -182,6 +182,7 @@ public class PresenterAttendeeViewModel
     public string? ConfirmationSource { get; set; }
     public DateTime? InvitationSentAtUtc { get; set; }
     public DateTime? FeedbackInvitationSentAtUtc { get; set; }
+    public DateTime? ProfileInvitationSentAtUtc { get; set; }
     public bool HasFeedback { get; set; }
 }
 
@@ -195,6 +196,15 @@ public class SendAttendanceInvitationsViewModel
 }
 
 public class SendFeedbackInvitationsViewModel
+{
+    [Required]
+    public int ProgrammeId { get; set; }
+
+    [Required, MinLength(1)]
+    public int[] InductionCaseIds { get; set; } = [];
+}
+
+public class SendProfileInvitationsViewModel
 {
     [Required]
     public int ProgrammeId { get; set; }

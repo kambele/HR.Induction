@@ -47,6 +47,12 @@ public interface IInductionEmailService
         string feedbackUrl,
         CancellationToken cancellationToken = default);
 
+    Task SendProfileReviewInvitationAsync(
+        InductionCase inductionCase,
+        InductionProgramme programme,
+        string inductionProfileUrl,
+        CancellationToken cancellationToken = default);
+
     Task SendProgrammeCalendarInvitationAsync(
         InductionCase inductionCase,
         InductionProgramme programme,
@@ -204,7 +210,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
         }
 
         var subject = $"Feedback and evaluation: {programme.Title}";
-        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\n{programme.Title} has been completed. Please use the one-time link below and sign in with your NAMFISA Windows account to rate each presentation included in the evaluation and complete the overall programme evaluation.\r\n\r\nComplete feedback and evaluation: {feedbackUrl}\r\n\r\nThe link opens a standalone employee form and stops working after submission. The attached guide explains each step.";
+        var messageText = $"Hello {inductionCase.FirstName},\r\n\r\n{programme.Title} has been completed. Please use the secure link below and sign in with your NAMFISA Windows account to rate each presentation included in the evaluation and complete the overall programme evaluation.\r\n\r\nComplete feedback and evaluation: {feedbackUrl}\r\n\r\nThe link remains available for you to review your submitted feedback, but the evaluation can be submitted only once. The attached guide explains each step.";
 
         using var message = new MailMessage
         {
@@ -240,6 +246,22 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
 
         cancellationToken.ThrowIfCancellationRequested();
         await smtpClient.SendMailAsync(message, cancellationToken);
+    }
+
+    public Task SendProfileReviewInvitationAsync(
+        InductionCase inductionCase,
+        InductionProgramme programme,
+        string inductionProfileUrl,
+        CancellationToken cancellationToken = default)
+    {
+        var subject = $"Action required: review and sign off your induction - {programme.Title}";
+        var body = $"Hello {{FirstName}},\r\n\r\nThe induction programme {programme.Title} has been completed. Please open your induction profile, review your employee details, programme record, checklist progress and any feedback requirements, then complete the employee sign-off when all required activities are complete.\r\n\r\nOpen your induction profile: {{InductionUrl}}\r\n\r\nSign in with your NAMFISA Windows account. Your sign-off will be recorded against your authenticated AD identity.";
+        return SendInvitationAsync(
+            inductionCase,
+            inductionProfileUrl,
+            subject,
+            body,
+            cancellationToken);
     }
 
     public async Task SendProgrammeCalendarInvitationAsync(
@@ -513,7 +535,7 @@ public sealed class InductionEmailService(IOptionsMonitor<InductionEmailOptions>
                       <table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="background:#19513a;border-radius:8px;">
                         <a href="{{safeUrl}}" style="display:inline-block;padding:13px 22px;color:#ffffff;text-decoration:none;font-weight:700;">Complete feedback and evaluation</a>
                       </td></tr></table>
-                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">One-time employee link</strong><br>The button opens a standalone form for your Windows account and stops working after submission. Rate each presentation shown, answer the overall questions and review your responses before submitting.</div>
+                      <div style="margin-top:22px;padding:14px 16px;background:#f7faf7;border-left:4px solid #91cf49;font-size:13px;line-height:1.55;color:#4f5f56;"><strong style="color:#17211c;">Secure employee link</strong><br>The button opens a standalone form for your Windows account. Feedback can be submitted only once, and the link remains available afterward for you to review your response.</div>
                       <p style="margin:24px 0 0;font-size:13px;line-height:1.55;color:#66736c;">Sign in with your NAMFISA Windows account. If the button does not open, copy this address into your browser:<br><a href="{{safeUrl}}" style="color:#19513a;word-break:break-all;">{{safeUrl}}</a></p>
                     </td></tr>
                     <tr><td style="padding:17px 30px;background:#edf3ee;color:#66736c;font-size:12px;">Feedback is recorded against the authenticated employee AD account.</td></tr>

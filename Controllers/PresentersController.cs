@@ -270,7 +270,9 @@ public class PresentersController(
                 continue;
             }
 
-            var feedbackToken = Guid.NewGuid();
+            var attendance = GetOrCreateAttendance(programme, employee);
+            var isNewFeedbackToken = !attendance.FeedbackAccessToken.HasValue;
+            var feedbackToken = attendance.FeedbackAccessToken ?? Guid.NewGuid();
             var feedbackUrl = BuildFeedbackUrl(feedbackToken);
             if (string.IsNullOrWhiteSpace(feedbackUrl))
             {
@@ -286,10 +288,11 @@ public class PresentersController(
                     feedbackUrl,
                     HttpContext.RequestAborted);
 
-                var attendance = GetOrCreateAttendance(programme, employee);
                 attendance.FeedbackAccessToken = feedbackToken;
-                attendance.FeedbackAccessTokenIssuedAtUtc = DateTime.UtcNow;
-                attendance.FeedbackAccessTokenUsedAtUtc = null;
+                if (isNewFeedbackToken)
+                {
+                    attendance.FeedbackAccessTokenIssuedAtUtc = DateTime.UtcNow;
+                }
                 attendance.FeedbackInvitationSentAtUtc = DateTime.UtcNow;
                 attendance.FeedbackInvitationSentBy = sentBy;
                 attendance.FeedbackInvitationSentTo = employee.EmployeeEmail.Trim();
@@ -313,6 +316,96 @@ public class PresentersController(
         if (failures.Count > 0)
         {
             TempData["Error"] = $"{failures.Count} feedback invitation{(failures.Count == 1 ? string.Empty : "s")} could not be sent. {string.Join(" ", failures.Take(3))}";
+        }
+
+        return RedirectToAction(nameof(Programme), new { id = programme.Id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendProfileInvitations(SendProfileInvitationsViewModel model)
+    {
+        if (!accessService.IsHr(User)) return Forbid();
+
+        var programme = await dbContext.InductionProgrammes
+            .Include(x => x.Sessions)
+            .Include(x => x.Participants)
+                .ThenInclude(x => x.ProgrammeAttendance)
+            .SingleOrDefaultAsync(x => x.Id == model.ProgrammeId, HttpContext.RequestAborted);
+        if (programme is null) return NotFound();
+
+        if (!InductionProgrammeRules.IsCompleted(programme))
+        {
+            TempData["Error"] = "Induction profile and sign-off links can be sent only after the programme is fully completed.";
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
+        if (!ModelState.IsValid || model.InductionCaseIds.Length == 0)
+        {
+            TempData["Error"] = "Select at least one employee to invite for induction review and sign-off.";
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
+        if (!emailService.ConfigurationStatus.IsConfigured)
+        {
+            TempData["Error"] = emailService.ConfigurationStatus.Summary;
+            return RedirectToAction(nameof(Programme), new { id = programme.Id });
+        }
+
+        var selectedIds = model.InductionCaseIds.Distinct().Take(200).ToHashSet();
+        var employees = programme.Participants
+            .Where(x => selectedIds.Contains(x.Id))
+            .OrderBy(x => x.EmployeeName)
+            .ToList();
+        var sentBy = accessService.CurrentUsername(User);
+        var sentCount = 0;
+        var failures = new List<string>();
+
+        foreach (var employee in employees)
+        {
+            if (string.IsNullOrWhiteSpace(employee.EmployeeEmail))
+            {
+                failures.Add($"{employee.EmployeeName}: email address is missing.");
+                continue;
+            }
+
+            var profileUrl = BuildInductionProfileUrl(employee.AccessToken);
+            if (string.IsNullOrWhiteSpace(profileUrl))
+            {
+                failures.Add($"{employee.EmployeeName}: induction profile link could not be created.");
+                continue;
+            }
+
+            try
+            {
+                await emailService.SendProfileReviewInvitationAsync(
+                    employee,
+                    programme,
+                    profileUrl,
+                    HttpContext.RequestAborted);
+
+                var attendance = GetOrCreateAttendance(programme, employee);
+                attendance.ProfileInvitationSentAtUtc = DateTime.UtcNow;
+                attendance.ProfileInvitationSentBy = sentBy;
+                attendance.ProfileInvitationSentTo = employee.EmployeeEmail.Trim();
+                await dbContext.SaveChangesAsync(HttpContext.RequestAborted);
+                sentCount++;
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception,
+                    "Failed to send induction profile review invitation for programme {ProgrammeId} to induction {InductionId}.",
+                    programme.Id,
+                    employee.Id);
+                failures.Add($"{employee.EmployeeName}: delivery failed.");
+            }
+        }
+
+        if (sentCount > 0)
+        {
+            TempData["Success"] = $"Sent {sentCount} induction review and sign-off invitation{(sentCount == 1 ? string.Empty : "s")}.";
+        }
+        if (failures.Count > 0)
+        {
+            TempData["Error"] = $"{failures.Count} profile invitation{(failures.Count == 1 ? string.Empty : "s")} could not be sent. {string.Join(" ", failures.Take(3))}";
         }
 
         return RedirectToAction(nameof(Programme), new { id = programme.Id });
@@ -472,6 +565,7 @@ public class PresentersController(
                     ConfirmationSource = induction.ProgrammeAttendance?.ConfirmationSource,
                     InvitationSentAtUtc = induction.ProgrammeAttendance?.InvitationSentAtUtc,
                     FeedbackInvitationSentAtUtc = induction.ProgrammeAttendance?.FeedbackInvitationSentAtUtc,
+                    ProfileInvitationSentAtUtc = induction.ProgrammeAttendance?.ProfileInvitationSentAtUtc,
                     HasFeedback = induction.EmployeeFeedback is not null
                 })
                 .ToList(),
@@ -554,6 +648,22 @@ public class PresentersController(
             "Feedback",
             "EmployeePortal",
             new { token = tokenText },
+            Request.Scheme,
+            Request.Host.Value);
+    }
+
+    private string? BuildInductionProfileUrl(Guid accessToken)
+    {
+        var tokenText = accessToken.ToString("N");
+        if (emailService.PublicBaseUrl is { Length: > 0 } publicBaseUrl)
+        {
+            return $"{publicBaseUrl.TrimEnd('/')}/Inductions/Details/{tokenText}";
+        }
+
+        return Url.Action(
+            "Details",
+            "Inductions",
+            new { id = tokenText },
             Request.Scheme,
             Request.Host.Value);
     }

@@ -4,14 +4,53 @@
     ViewData["Title"] = "Feedback and evaluation";
     var programme = Model.Programme;
     var sessions = programme.Sessions.Where(x => x.RequiresFeedback).OrderBy(x => x.SortOrder).ToList();
+    var timeAllocationText = Model.SubmittedFeedback?.TimeAllocationResponse switch
+    {
+        TimeAllocationResponse.Appropriate => "Appropriate",
+        TimeAllocationResponse.TooShort => "Too short",
+        TimeAllocationResponse.TooLong => "Too long",
+        _ => "Not provided"
+    };
 }
 
 <section class="employee-portal-card employee-feedback-card">
-    <p class="eyebrow">One-time employee evaluation</p>
+    <p class="eyebrow">Employee evaluation</p>
     <h1>Feedback and evaluation</h1>
-    <p class="employee-portal-intro">Please evaluate <strong>@programme.Title</strong>. Only presentations marked for employee feedback are listed.</p>
+    <p class="employee-portal-intro">Review <strong>@programme.Title</strong> and your programme evaluation.</p>
 
-    <form asp-controller="EmployeePortal" asp-action="Feedback" asp-route-token="@Model.Token" method="post">
+    @if (Model.SubmittedFeedback is EmployeeFeedback submitted)
+    {
+        <div class="employee-attendance-recorded mb-4">
+            <span aria-hidden="true">✓</span>
+            <div><strong>Feedback already submitted</strong><p>Your evaluation was recorded on @submitted.SubmittedAtUtc.ToLocalTime().ToString("dd MMMM yyyy HH:mm"). You may return to this link to review it.</p></div>
+        </div>
+
+        <section class="employee-form-section">
+            <h2>Presentation ratings</h2>
+            <div class="submitted-ratings">
+                @foreach (var rating in submitted.PresentationRatings.OrderBy(x => x.InductionProgrammeSession.SortOrder))
+                {
+                    <div><span>@rating.InductionProgrammeSession.Division<small>@rating.InductionProgrammeSession.PresenterName · @rating.InductionProgrammeSession.StartTime.ToString("hh\\:mm")</small></span><strong>@rating.Rating/5</strong></div>
+                }
+            </div>
+        </section>
+
+        <section class="employee-form-section">
+            <h2>Overall evaluation</h2>
+            <dl class="feedback-summary">
+                <div><dt>Understanding of the organisation</dt><dd>@submitted.ProgrammeUnderstandingRating/5</dd></div>
+                <div><dt>Presentation time allocation</dt><dd>@timeAllocationText</dd></div>
+                <div><dt>Overall programme rating</dt><dd>@submitted.OverallProgrammeRating/5</dd></div>
+                <div><dt>Most valuable aspect</dt><dd>@submitted.MostValuableAspect</dd></div>
+                <div><dt>Recommended improvements</dt><dd>@submitted.ImprovementRecommendations</dd></div>
+            </dl>
+        </section>
+        <p class="employee-portal-security">Feedback can be submitted only once. This link remains available for review.</p>
+    }
+    else
+    {
+        <p class="employee-portal-intro">Only presentations marked for employee feedback are listed. Complete each section before submitting.</p>
+        <form asp-controller="EmployeePortal" asp-action="Feedback" asp-route-token="@Model.Token" method="post">
         <div asp-validation-summary="All" class="alert alert-danger"></div>
 
         <section class="employee-form-section">
@@ -87,8 +126,9 @@
         </section>
 
         <button class="btn btn-primary btn-lg employee-submit-button" type="submit">Submit feedback and evaluation</button>
-        <p class="employee-portal-security">Your response can be submitted once. After submission, this link will no longer open the form.</p>
-    </form>
+            <p class="employee-portal-security">Your response can be submitted only once. This link remains available afterward for you to review your submitted evaluation.</p>
+        </form>
+    }
 </section>
 
 @section Scripts {

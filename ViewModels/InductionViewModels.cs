@@ -150,6 +150,7 @@ public class EmployeeFeedbackPortalViewModel
     public Guid Token { get; set; }
     public required InductionProgramme Programme { get; set; }
     public EmployeeFeedbackInputModel Feedback { get; set; } = new();
+    public EmployeeFeedback? SubmittedFeedback { get; set; }
 }
 
 public class EmployeePortalMessageViewModel

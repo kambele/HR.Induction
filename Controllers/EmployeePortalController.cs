@@ -154,7 +154,12 @@ public class EmployeePortalController(
             return unavailable;
         }
 
-        var induction = attendance!.InductionCase;
+        if (attendance!.InductionCase.EmployeeFeedback is not null)
+        {
+            return RedirectToAction(nameof(Feedback), new { token = token.ToString("N") });
+        }
+
+        var induction = attendance.InductionCase;
         var programmeSessions = attendance.InductionProgramme.Sessions
             .Where(x => x.RequiresFeedback)
             .OrderBy(x => x.SortOrder)
@@ -189,7 +194,6 @@ public class EmployeePortalController(
             }).ToList(),
             SubmittedBy = accessService.CurrentUsername(User)
         };
-        attendance.FeedbackAccessToken = null;
         attendance.FeedbackAccessTokenUsedAtUtc = DateTime.UtcNow;
 
         try
@@ -198,14 +202,14 @@ public class EmployeePortalController(
         }
         catch (DbUpdateConcurrencyException)
         {
-            return PortalUnavailable();
+            return RedirectToAction(nameof(Feedback), new { token = token.ToString("N") });
         }
         catch (DbUpdateException exception)
         {
             logger.LogWarning(exception,
                 "A duplicate or expired employee feedback submission was rejected for induction {InductionId}.",
                 induction.Id);
-            return PortalUnavailable();
+            return RedirectToAction(nameof(Feedback), new { token = token.ToString("N") });
         }
 
         return RedirectToAction(nameof(Completed), new { type = "feedback" });
@@ -236,6 +240,8 @@ public class EmployeePortalController(
     private IQueryable<ProgrammeAttendance> FeedbackTokenQuery() => dbContext.ProgrammeAttendances
         .Include(x => x.InductionCase)
             .ThenInclude(x => x.EmployeeFeedback)
+                .ThenInclude(x => x!.PresentationRatings)
+                    .ThenInclude(x => x.InductionProgrammeSession)
         .Include(x => x.InductionProgramme)
             .ThenInclude(x => x.Sessions);
 
@@ -254,10 +260,6 @@ public class EmployeePortalController(
         {
             return PortalUnavailable(message: "Attendance must be confirmed as present before feedback can be submitted.");
         }
-        if (attendance.InductionCase.EmployeeFeedback is not null)
-        {
-            return PortalUnavailable();
-        }
         if (!InductionProgrammeRules.IsCompleted(attendance.InductionProgramme))
         {
             return PortalUnavailable(message: "Feedback is not available until the induction programme has been completed.");
@@ -272,7 +274,7 @@ public class EmployeePortalController(
 
     private IActionResult PortalUnavailable(
         int statusCode = StatusCodes.Status410Gone,
-        string message = "This one-time link is no longer available. It may already have been used or replaced by a newer invitation.")
+        string message = "This secure link is no longer available. It may have been replaced by a newer invitation.")
     {
         Response.StatusCode = statusCode;
         return View("Unavailable", new EmployeePortalMessageViewModel
@@ -290,6 +292,7 @@ public class EmployeePortalController(
     {
         Token = token,
         Programme = attendance.InductionProgramme,
+        SubmittedFeedback = attendance.InductionCase.EmployeeFeedback,
         Feedback = feedback ?? new EmployeeFeedbackInputModel
         {
             PresentationRatings = attendance.InductionProgramme.Sessions

@@ -385,6 +385,14 @@ public class ProgrammeAttendance
 
     [StringLength(254), EmailAddress]
     public string? CalendarInvitationSentTo { get; set; }
+
+    public DateTime? ProfileInvitationSentAtUtc { get; set; }
+
+    [StringLength(150)]
+    public string? ProfileInvitationSentBy { get; set; }
+
+    [StringLength(254), EmailAddress]
+    public string? ProfileInvitationSentTo { get; set; }
 }
 
 public class PresentationRating
